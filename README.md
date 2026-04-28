@@ -108,8 +108,10 @@
 ✅ PostgreSQL + pgvector 向量存储与检索
 ✅ 单轮 AI 问答，返回答案和引用片段
 ✅ 知识库归属校验，跨用户访问统一返回 404
-❌ 对话历史
-❌ 基础调用记录
+✅ 对话会话创建、查询、归档（软删除）
+✅ 按会话查看历史消息列表（append-only）
+✅ 每次 LLM 调用自动记录（模型、token、耗时、状态）
+✅ 调用记录按知识库和日期范围查询
 ```
 
 ---
@@ -209,7 +211,7 @@ domain.billing     Token 与成本上下文
 | 向量能力 | pgvector | 与业务库同实例，降低部署成本 |
 | ORM | MyBatis-Plus | 国内 Java 项目接受度高，适合工程落地 |
 | 数据迁移 | Flyway | 数据库版本管理 |
-| 缓存 | Redis 7 | Docker Compose 预留服务；v0.1 后端未启用 Redis Starter |
+| 缓存 | Redis 7 | Docker Compose 预留服务；当前后端未启用 Redis Starter |
 | 鉴权 | Spring Security + JWT | 无状态接口鉴权 |
 | 文档解析 | Apache Tika / PDFBox / POI | 商业版增强 |
 | 部署 | Docker Compose | 本地一键启动 |
@@ -490,6 +492,62 @@ references  检索命中的知识片段
 
 ---
 
+### 9. 创建对话会话
+
+```bash
+curl -X POST http://localhost:8080/api/v1/conversations \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "knowledgeBaseId": "YOUR_KB_ID",
+    "title": "年假规则咨询"
+  }'
+```
+
+返回中的 `data.id` 是后续带历史问答使用的 `conversationId`。
+
+---
+
+### 10. 带会话问答
+
+```bash
+curl -X POST http://localhost:8080/api/v1/chat \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "knowledgeBaseId": "YOUR_KB_ID",
+    "conversationId": "YOUR_CONVERSATION_ID",
+    "question": "公司的年假规则是什么？",
+    "topK": 5
+  }'
+```
+
+带 `conversationId` 时会保存用户消息、助手消息，并记录一次基础调用记录。
+
+---
+
+### 11. 查询会话消息
+
+```bash
+curl http://localhost:8080/api/v1/conversations/YOUR_CONVERSATION_ID/messages \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+消息列表默认最多返回 `ai-kb.chat.max-list-results` 条。免费 Demo 默认值为 `100`，这是为了避免一次性返回过多历史数据的演示保护值，不是业务上限；真实项目建议使用分页游标。
+
+---
+
+### 12. 查询调用记录
+
+```bash
+curl "http://localhost:8080/api/v1/invocation-logs?knowledgeBaseId=YOUR_KB_ID&dateFrom=2026-01-01&dateTo=2026-01-31" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+免费 Demo 的调用记录只保存基础元数据：模型名、token 数、耗时、状态、错误摘要，不保存完整请求/响应内容，也不提供成本报表和审计后台。
+
+---
+
 ## 项目目录结构
 
 ```text
@@ -585,7 +643,7 @@ openspec/specs/
 |---|---|---|
 | v0.1 | 用户注册 / 登录 / JWT 鉴权 | ✅ 已完成 |
 | v0.2 | 跑通上传 → 切分 → 向量化 → 检索 → 问答主流程 | ✅ 已完成 |
-| v0.3 | 对话历史、基础调用记录 | 📋 计划中 |
+| v0.3 | 对话历史、基础调用记录 | ✅ 已完成 |
 | v0.4 | Docker Compose 一键启动、截图、演示视频 | 📋 计划中 |
 | v1.0 | 商业版本开放咨询 | 📋 计划中 |
 
@@ -606,7 +664,7 @@ openspec/specs/
 | AI 问答 | ✅ 单轮 / 引用来源 | ✅ 多轮 / Prompt 模板 |
 | Token 统计 | ❌ | ✅ |
 | 成本报表 | ❌ | ✅ |
-| 调用日志 | ❌ | ✅ 完整审计 |
+| 调用记录 | ✅ 基础记录 | ✅ 完整审计 |
 | 限流 / 熔断 / 重试 | ❌ | ✅ |
 | 管理后台 | ❌ | ✅ |
 | 二开文档 | ❌ | ✅ |
@@ -648,7 +706,7 @@ Docker / K8s 部署脚本
 
 | 版本 | 适合人群 | 内容说明 |
 |---|---|---|
-| 免费 Demo | 学习、体验、验证方向 | 本仓库提供，当前 v0.2 已跑通用户鉴权和 RAG 主流程 |
+| 免费 Demo | 学习、体验、验证方向 | 本仓库提供，当前 v0.3 已跑通用户鉴权、RAG 主流程、对话历史与调用记录 |
 | 进阶版 | 想学习完整项目、自己二开 | 完整源码、启动文档、基础二开说明 |
 | 专业版 | 接单、公司内部项目、小团队落地 | 多模型适配、Token 统计、调用日志、管理后台、视频讲解 |
 | 陪跑版 | 需要部署指导、架构答疑、二开规划 | 专业版内容 + 1v1 架构答疑 + 部署指导 |
@@ -662,7 +720,7 @@ Docker / K8s 部署脚本
 
 ## 截图
 
-当前版本暂无前端页面截图。v0.2 已跑通 API 主流程，后续补充演示截图或前端页面。
+当前版本暂无前端页面截图。v0.3 已跑通对话历史与调用记录 API，后续补充演示截图或前端页面。
 
 ---
 
@@ -680,7 +738,7 @@ Docker / K8s 部署脚本
 
 Token 统计、成本报表、调用日志、审计、限流和失败重试属于真实项目交付能力，是商业版本的核心价值。
 
-当前免费版先用于学习和体验工程骨架与最小 RAG 主链路，不包含商业交付所需的完整治理能力。
+当前免费版先用于学习和体验工程骨架、最小 RAG 主链路、基础对话历史与基础调用记录，不包含商业交付所需的完整治理能力。
 
 ---
 

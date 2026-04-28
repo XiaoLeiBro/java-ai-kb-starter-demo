@@ -23,3 +23,6 @@ ai-kb:
     jwt:
       # 生产环境请用 openssl rand -base64 48 生成
       secret: dev-jwt-secret-please-change-in-prod-at-least-32-bytes-long
+  chat:
+    # 本地演示默认最多返回 100 条会话/消息/调用记录；真实项目建议改为分页
+    max-list-results: 100

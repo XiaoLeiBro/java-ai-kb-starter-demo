@@ -9,6 +9,11 @@ public enum ErrorCode {
   UNSUPPORTED_FILE_TYPE(400, "UNSUPPORTED_FILE_TYPE", "Unsupported file type"),
   NOT_FOUND(404, "NOT_FOUND", "Resource not found"),
   LLM_PROVIDER_ERROR(502, "LLM_PROVIDER_ERROR", "LLM provider call failed"),
+  CONVERSATION_ARCHIVED(
+      409, "CONVERSATION_ARCHIVED", "Cannot send messages to an archived conversation"),
+  CONVERSATION_GONE(410, "CONVERSATION_GONE", "Conversation is no longer available"),
+  KB_MISMATCH(400, "KB_MISMATCH", "Knowledge base does not match conversation"),
+  KNOWLEDGE_BASE_ARCHIVED(400, "KNOWLEDGE_BASE_ARCHIVED", "Knowledge base is archived"),
   INTERNAL_ERROR(500, "INTERNAL_ERROR", "Internal server error");
 
   private final int httpStatus;

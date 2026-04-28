@@ -2,11 +2,13 @@ package com.brolei.aikb.infrastructure.llm;
 
 import com.brolei.aikb.common.exception.BusinessException;
 import com.brolei.aikb.common.exception.ErrorCode;
+import com.brolei.aikb.domain.llm.LlmChatResult;
 import com.brolei.aikb.domain.llm.LlmProvider;
-import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.response.ChatResponse;
+import dev.langchain4j.model.output.TokenUsage;
 import org.springframework.stereotype.Component;
 
 /** 基于 LangChain4j 的大语言模型提供者实现. */
@@ -33,12 +35,40 @@ public class LangChain4jLlmProvider implements LlmProvider {
   @Override
   public String chat(String systemPrompt, String userMessage) {
     try {
-      SystemMessage sysMsg = SystemMessage.from(systemPrompt);
-      UserMessage usrMsg = UserMessage.from(userMessage);
-      AiMessage aiMessage = chatModel.chat(sysMsg, usrMsg).aiMessage();
-      return aiMessage.text();
+      ChatResponse response = doChat(systemPrompt, userMessage);
+      return response.aiMessage().text();
+    } catch (BusinessException e) {
+      throw e;
     } catch (Exception e) {
       throw new BusinessException(ErrorCode.LLM_PROVIDER_ERROR, "LLM 调用失败: " + e.getMessage());
     }
+  }
+
+  @Override
+  public LlmChatResult chatWithUsage(String systemPrompt, String userMessage) {
+    try {
+      ChatResponse response = doChat(systemPrompt, userMessage);
+      String answer = response.aiMessage().text();
+      TokenUsage tokenUsage = response.tokenUsage();
+      int promptTokens =
+          tokenUsage != null && tokenUsage.inputTokenCount() != null
+              ? tokenUsage.inputTokenCount()
+              : 0;
+      int completionTokens =
+          tokenUsage != null && tokenUsage.outputTokenCount() != null
+              ? tokenUsage.outputTokenCount()
+              : 0;
+      return LlmChatResult.of(answer, promptTokens, completionTokens);
+    } catch (BusinessException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new BusinessException(ErrorCode.LLM_PROVIDER_ERROR, "LLM 调用失败: " + e.getMessage());
+    }
+  }
+
+  private ChatResponse doChat(String systemPrompt, String userMessage) {
+    SystemMessage sysMsg = SystemMessage.from(systemPrompt);
+    UserMessage usrMsg = UserMessage.from(userMessage);
+    return chatModel.chat(sysMsg, usrMsg);
   }
 }

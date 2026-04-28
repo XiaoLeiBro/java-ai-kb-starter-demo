@@ -9,7 +9,7 @@ A：不可以。免费版采用 Source Available License，禁止商业使用、
 ---
 
 **Q：支持国内哪些大模型？**  
-A：当前 `v0.2` 已通过 OpenAI Compatible 协议接入 Chat Model 和 Embedding Model。  
+A：当前 `v0.3` 已通过 OpenAI Compatible 协议接入 Chat Model 和 Embedding Model，并支持基础对话历史与调用记录。  
 免费版只读取配置中的一组 Chat / Embedding 模型，不提供多供应商管理后台。你可以按账号情况配置兼容 OpenAI 接口的模型服务，例如 SiliconFlow、DeepSeek、Qwen 或本地 OpenAI Compatible 服务。
 
 商业版会提供更多模型供应商适配、多模型配置、调用审计和成本统计。
@@ -90,6 +90,12 @@ Embedding 模型名称
 **Q：可以离线部署吗？**  
 A：注册、登录、知识库元数据和本地文件存储可以离线运行。RAG 问答主流程默认需要调用你配置的大模型 / Embedding 服务。  
 如果需要完全离线，需要把 OpenAI Compatible `base-url` 指向本地 Ollama、vLLM 或其他私有化模型服务，并保证 Chat 与 Embedding 都可用。企业版可以提供完整私有化部署方案。
+
+---
+
+**Q：为什么消息和调用记录默认最多返回 100 条？**  
+A：`100` 不是业务定义，而是免费 Demo 的服务端保护上限，用来避免一次请求返回过多历史消息或调用记录。  
+这个值可通过 `ai-kb.chat.max-list-results` 或环境变量 `AI_KB_CHAT_MAX_LIST_RESULTS` 调整。真实商业项目建议改为游标分页、时间范围分页或搜索条件分页。
 
 ---
 

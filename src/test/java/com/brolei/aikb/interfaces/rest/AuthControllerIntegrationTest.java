@@ -1,13 +1,16 @@
 package com.brolei.aikb.interfaces.rest;
 
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.brolei.aikb.domain.llm.EmbeddingProvider;
+import com.brolei.aikb.domain.llm.LlmChatResult;
 import com.brolei.aikb.domain.llm.LlmProvider;
 import com.brolei.aikb.interfaces.dto.auth.LoginRequest;
 import com.brolei.aikb.interfaces.dto.auth.RegisterRequest;
@@ -52,6 +55,7 @@ class AuthControllerIntegrationTest {
     registry.add("spring.flyway.enabled", () -> "true");
     registry.add("spring.flyway.baseline-on-migrate", () -> "true");
     registry.add("ai-kb.security.jwt.secret", () -> "test-jwt-secret-with-at-least-32-characters");
+    registry.add("ai-kb.chat.max-list-results", () -> "2");
     registry.add("springdoc.api-docs.enabled", () -> "false");
     registry.add("springdoc.swagger-ui.enabled", () -> "false");
   }
@@ -217,6 +221,21 @@ class AuthControllerIntegrationTest {
   }
 
   @Test
+  void conversationEndpointsShouldReturnUnauthorizedWithoutJwt() throws Exception {
+    mockMvc.perform(get("/api/v1/conversations")).andExpect(status().isUnauthorized());
+    mockMvc
+        .perform(
+            post("/api/v1/conversations")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"knowledgeBaseId\":\"kb-1\"}"))
+        .andExpect(status().isUnauthorized());
+    mockMvc
+        .perform(get("/api/v1/conversations/00000000-0000-0000-0000-000000000000/messages"))
+        .andExpect(status().isUnauthorized());
+    mockMvc.perform(get("/api/v1/invocation-logs")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
   void createKnowledgeBaseShouldReturn200WithJwt() throws Exception {
     String token = registerAndLogin("kb_user");
 
@@ -361,6 +380,160 @@ class AuthControllerIntegrationTest {
         .andExpect(status().isBadRequest());
   }
 
+  @Test
+  void conversationChatShouldPersistMessagesAndInvocationLogThenArchive() throws Exception {
+    String token = registerAndLogin("conv_user");
+    String kbId = createKnowledgeBase(token);
+    uploadMarkdown(token, kbId, "policy.md", "年假规则：司龄 1-3 年为 5 天。");
+    String conversationId = createConversation(token, kbId, null);
+
+    String chatResponse =
+        mockMvc
+            .perform(
+                post("/api/v1/chat")
+                    .header("Authorization", "Bearer " + token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {"knowledgeBaseId":"%s","conversationId":"%s","question":"年假规则是什么？","topK":3}
+                        """
+                            .formatted(kbId, conversationId)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.answer").value("fake answer"))
+            .andExpect(jsonPath("$.data.userMessageId").isNotEmpty())
+            .andExpect(jsonPath("$.data.assistantMessageId").isNotEmpty())
+            .andExpect(jsonPath("$.data.invocationLogId").isNotEmpty())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    String assistantMessageId =
+        objectMapper.readTree(chatResponse).get("data").get("assistantMessageId").asText();
+
+    mockMvc
+        .perform(
+            get("/api/v1/conversations/{id}/messages", conversationId)
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.length()").value(2))
+        .andExpect(jsonPath("$.data[0].role").value("USER"))
+        .andExpect(jsonPath("$.data[1].role").value("ASSISTANT"))
+        .andExpect(jsonPath("$.data[1].content").value("fake answer"));
+
+    mockMvc
+        .perform(get("/api/v1/invocation-logs").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.length()").value(1))
+        .andExpect(jsonPath("$.data[0].knowledgeBaseId").value(kbId))
+        .andExpect(jsonPath("$.data[0].conversationId").value(conversationId))
+        .andExpect(jsonPath("$.data[0].messageId").value(assistantMessageId))
+        .andExpect(jsonPath("$.data[0].promptTokens").value(12))
+        .andExpect(jsonPath("$.data[0].completionTokens").value(7))
+        .andExpect(jsonPath("$.data[0].totalTokens").value(19))
+        .andExpect(jsonPath("$.data[0].status").value("SUCCESS"));
+
+    mockMvc
+        .perform(
+            delete("/api/v1/conversations/{id}", conversationId)
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk());
+
+    mockMvc
+        .perform(
+            get("/api/v1/conversations/{id}/messages", conversationId)
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isGone());
+
+    mockMvc
+        .perform(
+            post("/api/v1/chat")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"knowledgeBaseId":"%s","conversationId":"%s","question":"年假规则是什么？","topK":3}
+                    """
+                        .formatted(kbId, conversationId)))
+        .andExpect(status().isConflict());
+  }
+
+  @Test
+  void listEndpointsShouldApplyConfiguredServerLimit() throws Exception {
+    String token = registerAndLogin("limit_user");
+    String kbId = createKnowledgeBase(token);
+    uploadMarkdown(token, kbId, "policy.md", "年假规则：司龄 1-3 年为 5 天。");
+    String conversationId = createConversation(token, kbId, "limit-test");
+
+    sendConversationChat(token, kbId, conversationId, "第一问");
+    sendConversationChat(token, kbId, conversationId, "第二问");
+    sendConversationChat(token, kbId, conversationId, "第三问");
+
+    mockMvc
+        .perform(
+            get("/api/v1/conversations/{id}/messages", conversationId)
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(header().string("X-Has-More", "true"))
+        .andExpect(header().string("X-Total-Count", "6"))
+        .andExpect(jsonPath("$.data.length()").value(2))
+        .andExpect(jsonPath("$.data[0].content").value("第三问"))
+        .andExpect(jsonPath("$.data[1].content").value("fake answer"));
+
+    mockMvc
+        .perform(get("/api/v1/invocation-logs").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(header().string("X-Has-More", "true"))
+        .andExpect(header().string("X-Total-Count", "3"))
+        .andExpect(jsonPath("$.data.length()").value(2));
+  }
+
+  @Test
+  void conversationAccessShouldReturn404ForOtherUserAndKbMismatchShouldReturn400()
+      throws Exception {
+    String ownerToken = registerAndLogin("conv_owner");
+    String otherToken = registerAndLogin("conv_other");
+    String firstKbId = createKnowledgeBase(ownerToken);
+    String secondKbId = createKnowledgeBase(ownerToken);
+    String conversationId = createConversation(ownerToken, firstKbId, "kb-a");
+
+    mockMvc
+        .perform(
+            get("/api/v1/conversations/{id}", conversationId)
+                .header("Authorization", "Bearer " + otherToken))
+        .andExpect(status().isNotFound());
+
+    mockMvc
+        .perform(
+            post("/api/v1/chat")
+                .header("Authorization", "Bearer " + ownerToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"knowledgeBaseId":"%s","conversationId":"%s","question":"年假规则是什么？","topK":3}
+                    """
+                        .formatted(secondKbId, conversationId)))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void invocationLogDateValidationShouldReturn400() throws Exception {
+    String token = registerAndLogin("log_date_user");
+
+    mockMvc
+        .perform(
+            get("/api/v1/invocation-logs")
+                .header("Authorization", "Bearer " + token)
+                .param("dateFrom", "2026-02-01")
+                .param("dateTo", "2026-01-01"))
+        .andExpect(status().isBadRequest());
+
+    mockMvc
+        .perform(
+            get("/api/v1/invocation-logs")
+                .header("Authorization", "Bearer " + token)
+                .param("dateFrom", "not-a-date"))
+        .andExpect(status().isBadRequest());
+  }
+
   private String registerAndLogin(String prefix) throws Exception {
     String username = "usr" + USER_SEQUENCE.incrementAndGet();
     RegisterRequest registerRequest = new RegisterRequest(username, "password123", null);
@@ -403,6 +576,50 @@ class AuthControllerIntegrationTest {
     return objectMapper.readTree(response).get("data").get("id").asText();
   }
 
+  private String createConversation(String token, String kbId, String title) throws Exception {
+    String titlePart = title == null ? "" : ",\"title\":\"%s\"".formatted(title);
+    String response =
+        mockMvc
+            .perform(
+                post("/api/v1/conversations")
+                    .header("Authorization", "Bearer " + token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"knowledgeBaseId\":\"%s\"%s}".formatted(kbId, titlePart)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.data.id").isNotEmpty())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    return objectMapper.readTree(response).get("data").get("id").asText();
+  }
+
+  private void uploadMarkdown(String token, String kbId, String filename, String content)
+      throws Exception {
+    MockMultipartFile file =
+        new MockMultipartFile("file", filename, "text/markdown", content.getBytes());
+    mockMvc
+        .perform(
+            multipart("/api/v1/knowledge-bases/{id}/documents", kbId)
+                .file(file)
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk());
+  }
+
+  private void sendConversationChat(
+      String token, String kbId, String conversationId, String question) throws Exception {
+    mockMvc
+        .perform(
+            post("/api/v1/chat")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"knowledgeBaseId":"%s","conversationId":"%s","question":"%s","topK":3}
+                    """
+                        .formatted(kbId, conversationId, question)))
+        .andExpect(status().isOk());
+  }
+
   @TestConfiguration
   static class FakeAiConfig {
 
@@ -415,7 +632,17 @@ class AuthControllerIntegrationTest {
     @Bean
     @Primary
     LlmProvider fakeLlmProvider() {
-      return (systemPrompt, userMessage) -> "fake answer";
+      return new LlmProvider() {
+        @Override
+        public String chat(String systemPrompt, String userMessage) {
+          return "fake answer";
+        }
+
+        @Override
+        public LlmChatResult chatWithUsage(String systemPrompt, String userMessage) {
+          return LlmChatResult.of("fake answer", 12, 7);
+        }
+      };
     }
 
     private static float[] vector() {

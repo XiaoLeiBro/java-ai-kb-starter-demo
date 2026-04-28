@@ -89,6 +89,9 @@ ai-kb:
   text-splitter:
     chunk-size: 800
     overlap: 120
+  chat:
+    # 免费 Demo 的列表查询保护上限，避免一次性返回过多历史消息或调用记录
+    max-list-results: ${AI_KB_CHAT_MAX_LIST_RESULTS:100}
   vector:
     # pgvector 向量存储配置（由 infrastructure.vector 读取并构建 EmbeddingStore Bean）
     host: localhost

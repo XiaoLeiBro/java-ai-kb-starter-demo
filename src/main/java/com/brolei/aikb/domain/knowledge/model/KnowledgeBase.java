@@ -95,6 +95,10 @@ public final class KnowledgeBase {
     return this.status == KnowledgeBaseStatus.ACTIVE;
   }
 
+  public boolean isArchived() {
+    return this.status == KnowledgeBaseStatus.ARCHIVED;
+  }
+
   public KnowledgeBaseId id() {
     return id;
   }

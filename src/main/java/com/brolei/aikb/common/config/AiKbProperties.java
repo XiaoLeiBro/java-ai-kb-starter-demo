@@ -15,6 +15,7 @@ public class AiKbProperties {
   private Security security = new Security();
   private Upload upload = new Upload();
   private TextSplitter textSplitter = new TextSplitter();
+  private Chat chat = new Chat();
 
   /** 安全配置. */
   @Getter
@@ -46,5 +47,12 @@ public class AiKbProperties {
   public static class TextSplitter {
     private int chunkSize = 800;
     private int overlap = 120;
+  }
+
+  /** 对话与调用记录配置. */
+  @Getter
+  @Setter
+  public static class Chat {
+    private int maxListResults = 100;
   }
 }

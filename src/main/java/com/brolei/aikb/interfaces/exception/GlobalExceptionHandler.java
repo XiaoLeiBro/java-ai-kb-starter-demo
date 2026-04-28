@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /** REST 控制器的全局异常处理. */
@@ -44,6 +45,13 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ApiResult<Void>> handleIllegalArgument(IllegalArgumentException e) {
     return ResponseEntity.status(400)
         .body(ApiResult.error(400, "VALIDATION_ERROR: " + e.getMessage()));
+  }
+
+  /** 处理类型转换异常（如非法日期格式）. */
+  @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+  public ResponseEntity<ApiResult<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+    return ResponseEntity.status(400)
+        .body(ApiResult.error(400, "VALIDATION_ERROR: Invalid parameter: " + e.getName()));
   }
 
   /** 处理文件上传大小超限异常. */

@@ -1,19 +1,26 @@
 package com.brolei.aikb.interfaces.dto.chat;
 
-import com.brolei.aikb.domain.knowledge.model.ChatAnswer;
+import com.brolei.aikb.application.chat.ChatResult;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.List;
 
 /** 聊天响应 DTO. */
-public record ChatResponse(String answer, List<Reference> references) {
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public record ChatResponse(
+    String answer,
+    List<Reference> references,
+    String userMessageId,
+    String assistantMessageId,
+    String invocationLogId) {
 
   /** 检索参考来源. */
   public record Reference(
       String documentId, String fileName, int chunkIndex, String content, double score) {}
 
-  /** 从领域 ChatAnswer 对象创建 ChatResponse. */
-  public static ChatResponse from(ChatAnswer chatAnswer) {
+  /** 从 ChatResult 创建 ChatResponse. */
+  public static ChatResponse from(ChatResult result) {
     List<Reference> refs =
-        chatAnswer.references().stream()
+        result.chatAnswer().references().stream()
             .map(
                 r ->
                     new Reference(
@@ -23,6 +30,11 @@ public record ChatResponse(String answer, List<Reference> references) {
                         r.content(),
                         r.score()))
             .toList();
-    return new ChatResponse(chatAnswer.answer(), refs);
+    return new ChatResponse(
+        result.chatAnswer().answer(),
+        refs,
+        result.userMessageId(),
+        result.assistantMessageId(),
+        result.invocationLogId());
   }
 }

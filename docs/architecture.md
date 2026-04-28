@@ -2,16 +2,17 @@
 
 ## 0. 当前实现状态
 
-当前仓库处于 `v0.2`：
+当前仓库处于 `v0.3`：
 
 ```text
 已实现：用户注册 / 登录 / JWT 鉴权、健康检查、DDD 分层骨架、PostgreSQL + Flyway 初始化
 已实现：知识库创建 / 列表、Markdown/TXT 上传、本地文件存储、文本切分、Embedding、pgvector 写入与检索、单轮 RAG 问答
-已预留：chat / billing 限界上下文后续扩展边界
-未实现：对话历史、多轮记忆、文档删除与向量清理、异步索引、调用记录、Token 计费、管理后台
+已实现：对话会话创建 / 列表 / 详情 / 归档、会话消息历史、基础 LLM 调用记录查询
+已预留：billing 限界上下文后续扩展边界
+未实现：多轮上下文自动注入、文档删除与向量清理、异步索引、完整 Token 计费、成本报表、管理后台
 ```
 
-本文档描述的是免费 Demo 的目标架构。当前 `v0.2` 已落地 RAG 主流程的 Controller / Service / Provider / VectorStore，商业版能力仍保持边界外。
+本文档描述的是免费 Demo 的目标架构。当前 `v0.3` 已落地 RAG 主流程、对话历史和基础调用记录，商业版治理能力仍保持边界外。
 
 ---
 
@@ -171,9 +172,10 @@ src/main/java/com/brolei/aikb/
 │   ├── rest/
 │   │   ├── HealthController.java
 │   │   ├── AuthController.java
-│   │   ├── KnowledgeBaseController.java      # v0.2
-│   │   ├── DocumentController.java           # v0.2
-│   │   └── ChatController.java               # v0.2
+│   │   ├── KnowledgeBaseController.java      # 知识库与文档
+│   │   ├── ChatController.java               # RAG 问答
+│   │   ├── ConversationController.java       # 对话历史
+│   │   └── InvocationLogController.java      # 基础调用记录
 │   ├── dto/
 │   └── exception/
 │
@@ -181,10 +183,11 @@ src/main/java/com/brolei/aikb/
 │   ├── user/
 │   │   └── UserApplicationService.java
 │   ├── knowledge/
-│   │   ├── KnowledgeBaseCommandService.java  # v0.2
-│   │   └── KnowledgeBaseQueryService.java    # v0.2
+│   │   └── KnowledgeApplicationService.java
 │   └── chat/
-│       └── ChatApplicationService.java       # v0.2
+│       ├── ChatApplicationService.java
+│       ├── ConversationApplicationService.java
+│       └── InvocationLogApplicationService.java
 │
 ├── domain/
 │   ├── user/
@@ -217,11 +220,11 @@ src/main/java/com/brolei/aikb/
 │   │   ├── knowledge/
 │   │   └── chat/
 │   ├── vector/
-│   │   └── PgvectorStore.java                # v0.2
+│   │   └── PgvectorStore.java
 │   ├── llm/
-│   │   └── LangChain4jOpenAiCompatibleProvider.java  # v0.2
+│   │   └── LangChain4jLlmProvider.java
 │   ├── file/
-│   │   └── LocalFileStorage.java             # v0.2
+│   │   └── LocalFileStorage.java
 │   ├── security/
 │   │   ├── JwtService.java
 │   │   ├── JwtAuthenticationFilter.java

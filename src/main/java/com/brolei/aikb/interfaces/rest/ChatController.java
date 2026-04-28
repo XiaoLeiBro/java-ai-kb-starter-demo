@@ -1,7 +1,8 @@
 package com.brolei.aikb.interfaces.rest;
 
 import com.brolei.aikb.application.chat.ChatApplicationService;
-import com.brolei.aikb.domain.knowledge.model.ChatAnswer;
+import com.brolei.aikb.application.chat.ChatResult;
+import com.brolei.aikb.domain.chat.model.ConversationId;
 import com.brolei.aikb.domain.knowledge.model.KnowledgeBaseId;
 import com.brolei.aikb.domain.user.model.UserId;
 import com.brolei.aikb.interfaces.dto.ApiResult;
@@ -32,8 +33,15 @@ public class ChatController {
       Authentication authentication, @Valid @RequestBody ChatRequest request) {
     UserId userId = (UserId) authentication.getPrincipal();
     KnowledgeBaseId kbId = KnowledgeBaseId.of(request.knowledgeBaseId());
-    ChatAnswer answer =
-        chatApplicationService.chat(userId, kbId, request.question(), request.topK());
-    return ResponseEntity.ok(ApiResult.ok(ChatResponse.from(answer)));
+    ChatResult result;
+    if (request.conversationId() != null && !request.conversationId().isBlank()) {
+      ConversationId conversationId = ConversationId.of(request.conversationId());
+      result =
+          chatApplicationService.chat(
+              userId, kbId, request.question(), request.topK(), conversationId);
+    } else {
+      result = chatApplicationService.chat(userId, kbId, request.question(), request.topK());
+    }
+    return ResponseEntity.ok(ApiResult.ok(ChatResponse.from(result)));
   }
 }
