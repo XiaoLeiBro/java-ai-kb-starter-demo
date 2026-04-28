@@ -52,3 +52,6 @@ data/
 
 # ---------- Claude / AI helpers ----------
 .claude/
+
+# ---------- OpenSpec local history ----------
+openspec/changes/archive/

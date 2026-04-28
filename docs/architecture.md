@@ -257,7 +257,7 @@ infrastructure.persistence
 3. ORM 注解会钉死字段可见性 —— PO 要求 public setter，聚合根要求私有
 4. 换存储时只换 PO 和 Mapper，领域对象保持干净
 
-详见 `openspec/changes/archive/2026-04-28-0001-user-auth-and-stack-realignment/design.md` §1。
+当前稳定规格见 `openspec/specs/user/auth.md`，历史变更过程文档不作为公开 Demo 的主要阅读入口。
 
 ---
 
@@ -442,11 +442,13 @@ AI 代码助手可以提高效率，但不能替代工程判断。
 典型变更流程：
 
 ```text
-1. /opsx:explore      先探索问题、理清需求
-2. /opsx:propose      生成变更提案
-3. /opsx:apply        按 tasks.md 实施代码
-4. /opsx:archive      归档已完成变更，转入 specs/ 作为正式规格
+1. explore     先探索问题、理清需求
+2. propose     在 openspec/changes/ 下生成变更提案
+3. apply       按 tasks.md 实施代码
+4. archive     完成后沉淀到 openspec/specs/
 ```
+
+公开 Demo 仓库优先保留 `openspec/specs/` 下的稳定规格；`openspec/changes/archive/` 属于本地过程记录，默认不提交，避免干扰读者理解当前版本。
 
 每个重要功能都建议走一次完整 OpenSpec 流程，例如：
 

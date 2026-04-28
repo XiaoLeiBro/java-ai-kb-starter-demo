@@ -459,8 +459,9 @@ java-ai-kb-starter-demo/
 │   └── .gitkeep
 └── openspec/
     ├── config.yaml
-    ├── changes/
+    ├── changes/                # 进行中的规格变更
     └── specs/
+        └── user/auth.md        # 当前稳定规格
 ```
 
 ---
@@ -470,7 +471,7 @@ java-ai-kb-starter-demo/
 本项目使用 OpenSpec 做变更管理，重要功能变更都会走以下流程：
 
 ```text
-提出变更提案 proposal
+提出变更提案 proposal（openspec/changes/）
         ↓
 补充设计说明 design
         ↓
@@ -478,24 +479,24 @@ java-ai-kb-starter-demo/
         ↓
 落地实现 apply
         ↓
-归档为稳定规格 archive
+沉淀为稳定规格 specs
 ```
 
-查看当前变更：
+当前公开仓库保留稳定规格：
 
 ```bash
-ls openspec/changes/
+ls openspec/specs/
 ```
 
-示例变更目录：
+当前已沉淀的规格：
 
 ```text
-openspec/changes/
-└── 0001-user-auth-jwt/
-    ├── proposal.md
-    ├── design.md
-    └── tasks.md
+openspec/specs/
+└── user/
+    └── auth.md
 ```
+
+`openspec/changes/archive/` 属于本地过程记录，默认不提交到公开 Demo，避免读者被历史草稿干扰。
 
 ---
 
