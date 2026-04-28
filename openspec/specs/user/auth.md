@@ -4,9 +4,7 @@
 
 当前稳定规格覆盖 `v0.1` 用户注册、登录、JWT 鉴权、当前用户查询和登出接口。
 
-## API
-
-### Register
+### 注册
 
 - Method: `POST`
 - Path: `/api/v1/auth/register`
@@ -20,7 +18,7 @@
   - 用户名重复：HTTP 409，`USERNAME_EXISTS`
   - 参数校验失败：HTTP 400，`VALIDATION_ERROR`
 
-### Login
+### 登陆
 
 - Method: `POST`
 - Path: `/api/v1/auth/login`
@@ -32,7 +30,7 @@
 - Failure:
   - 用户不存在、密码错误或用户禁用：HTTP 401，`INVALID_CREDENTIALS`
 
-### Current User
+### 当前用户
 
 - Method: `GET`
 - Path: `/api/v1/auth/me`
@@ -41,7 +39,7 @@
 - Failure:
   - 未登录或 token 无效：HTTP 401
 
-### Logout
+### 注销
 
 - Method: `POST`
 - Path: `/api/v1/auth/logout`

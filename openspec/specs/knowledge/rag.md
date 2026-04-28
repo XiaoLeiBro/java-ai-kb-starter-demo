@@ -8,8 +8,6 @@
 创建知识库 → 上传 Markdown/TXT → 文本切分 → Embedding → pgvector 入库 → 检索 → LLM 问答
 ```
 
-## API
-
 ### 创建知识库
 
 - Method: `POST`
