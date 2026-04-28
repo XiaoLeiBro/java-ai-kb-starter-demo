@@ -1,0 +1,25 @@
+# ============================================================
+# 本地开发配置模板
+# 使用方式：
+#   1. 复制为 application-dev.yml
+#   2. 填入你的真实 API Key 与密钥
+#   3. application-dev.yml 已在 .gitignore，不会被提交
+# ============================================================
+
+langchain4j:
+  open-ai:
+    chat-model:
+      # 推荐使用 SiliconFlow / DeepSeek / 通义千问等国内 OpenAI Compatible 服务
+      api-key: sk-your-real-key-here
+      base-url: https://api.siliconflow.cn/v1
+      model-name: Qwen/Qwen2.5-7B-Instruct
+    embedding-model:
+      api-key: sk-your-real-key-here
+      base-url: https://api.siliconflow.cn/v1
+      model-name: BAAI/bge-m3
+
+ai-kb:
+  security:
+    jwt:
+      # 生产环境请用 openssl rand -base64 48 生成
+      secret: dev-jwt-secret-please-change-in-prod-at-least-32-bytes-long

@@ -1,0 +1,54 @@
+# ---------- Java / Maven ----------
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+
+# ---------- IDE ----------
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.project
+.classpath
+.settings/
+.factorypath
+nb-configuration.xml
+
+# ---------- OS ----------
+.DS_Store
+Thumbs.db
+
+# ---------- Logs ----------
+logs/
+*.log
+
+# ---------- Env / Secrets ----------
+.env
+.env.local
+application-dev.yml
+application-local.yml
+application-prod.yml
+secrets/
+
+# ---------- Build output ----------
+build/
+out/
+dist/
+
+# ---------- Node (frontend, if any) ----------
+node_modules/
+.npm
+.pnpm-store/
+
+# ---------- Docker ----------
+volumes/
+data/
+
+# ---------- Claude / AI helpers ----------
+.claude/

@@ -1,0 +1,42 @@
+# Java AI Knowledge Base Starter - Demo 本地环境
+# 启动命令：docker compose up -d
+# 停止命令：docker compose down
+# 清理数据：docker compose down -v
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: ai-kb-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ai_kb
+      POSTGRES_USER: ai_kb
+      POSTGRES_PASSWORD: ai_kb_demo_2026
+    ports:
+      - "15432:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_kb -d ai_kb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: ai-kb-redis
+    restart: unless-stopped
+    ports:
+      - "16379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pg-data:
+  redis-data:

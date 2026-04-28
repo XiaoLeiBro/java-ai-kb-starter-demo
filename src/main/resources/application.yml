@@ -1,0 +1,105 @@
+# ============================================================
+# Java AI Knowledge Base Starter - Demo 应用配置
+# ============================================================
+# 本文件只放通用默认配置，敏感参数（API Key、DB 密码）请放在
+# application-dev.yml / application-prod.yml 中，且不要提交到 git
+# ============================================================
+
+spring:
+  application:
+    name: ai-kb-demo-server
+
+  # ---------------- 数据源 ----------------
+  datasource:
+    url: jdbc:postgresql://localhost:15432/ai_kb
+    username: ai_kb
+    password: ai_kb_demo_2026
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+  # ---------------- Redis ----------------
+  data:
+    redis:
+      host: localhost
+      port: 16379
+      timeout: 3s
+
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 20MB
+
+mybatis-plus:
+  global-config:
+    banner: false
+  configuration:
+    map-underscore-to-camel-case: true
+
+# ---------------- LangChain4j ----------------
+langchain4j:
+  open-ai:
+    chat-model:
+      # 默认占位，请在 application-dev.yml 中覆盖为真实值
+      api-key: ${AI_KB_LLM_API_KEY:please-override-me}
+      base-url: ${AI_KB_LLM_BASE_URL:https://api.siliconflow.cn/v1}
+      model-name: ${AI_KB_CHAT_MODEL:Qwen/Qwen2.5-7B-Instruct}
+      temperature: 0.3
+      timeout: PT60S
+      log-requests: true
+      log-responses: false
+    embedding-model:
+      api-key: ${AI_KB_LLM_API_KEY:please-override-me}
+      base-url: ${AI_KB_LLM_BASE_URL:https://api.siliconflow.cn/v1}
+      model-name: ${AI_KB_EMBEDDING_MODEL:BAAI/bge-m3}
+      timeout: PT30S
+
+# ---------------- 服务器 ----------------
+server:
+  port: 8080
+  compression:
+    enabled: true
+
+# ---------------- 监控 ----------------
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when_authorized
+
+# ---------------- 应用自定义 ----------------
+ai-kb:
+  security:
+    jwt:
+      secret: ${AI_KB_JWT_SECRET:change-me-in-production-default-demo-secret-do-not-use}
+      expiration-minutes: 10080
+  upload:
+    root-dir: ${AI_KB_UPLOAD_DIR:./data/uploads}
+    allowed-ext:
+      - md
+      - txt
+  vector:
+    # pgvector 向量存储配置（由 infrastructure.vector 读取并构建 EmbeddingStore Bean）
+    host: localhost
+    port: 15432
+    database: ai_kb
+    user: ai_kb
+    password: ai_kb_demo_2026
+    table: kb_embeddings
+    dimension: 1024           # 匹配 bge-m3
+    create-table: true
+    drop-table-first: false
+
+logging:
+  level:
+    root: INFO
+    com.brolei.aikb: INFO
+    dev.langchain4j: INFO

@@ -1,0 +1,58 @@
+schema: spec-driven
+
+# ==================================================
+# 项目上下文 - 每次生成变更提案时提供给 AI 参考
+# ==================================================
+context: |
+  项目名称：Java AI Knowledge Base Starter (Demo)
+  项目定位：Java 企业级 AI 知识库系统的免费演示版，配套商业版源码产品销售。
+  商业模式：免费版建立信任，进阶版 699-899 元，陪跑版 2999 起，企业版 3 万起。
+
+  技术栈：
+    - Java 21, Spring Boot 4.x
+    - LangChain4j（AI 框架，选择理由：与 Python LangChain 概念对齐，Agent/Memory/Tool 原生支持好）
+    - PostgreSQL 16 + pgvector（通过 langchain4j-pgvector，业务数据与向量同库）
+    - Redis 7（缓存 / 限流）
+    - Docker Compose 本地编排
+
+  架构风格：DDD 四层架构
+    - interfaces/     接入层（REST / DTO / 异常处理）
+    - application/    应用层（用例编排 / 事务边界）
+    - domain/         领域层（按限界上下文划分：user / knowledge / chat / llm / billing）
+    - infrastructure/ 基础设施层（MyBatis-Plus / pgvector / LangChain4j / 文件存储）
+
+  铁律：
+    - 领域层不依赖 Spring / MyBatis-Plus / HTTP / LangChain4j
+    - 仓储接口在领域层定义，实现放到 infrastructure.persistence
+    - 聚合根不暴露 public setter
+    - 多模型供应商通过统一 LlmProvider 接口适配（领域层定义），
+      LangChain4j 的 ChatLanguageModel / EmbeddingModel 只能出现在 infrastructure.llm
+
+  免费版 vs 商业版边界：
+    - 免费版：单知识库、单模型、md/txt 上传、基础 RAG、无 Token 统计
+    - 商业版：多模型、多格式解析、Token 统计、调用日志、管理后台、二开文档
+
+  命名约定：
+    - 包名：com.brolei.aikb.*
+    - Controller：xxxController（REST API）
+    - Application Service：xxxApplicationService / xxxCommandService / xxxQueryService
+    - 仓储接口：xxxRepository（定义在 domain 层）
+    - MyBatis-Plus 实现：XxxRepositoryImpl（放在 infrastructure.persistence.xxx.impl）
+    - 领域服务：xxxDomainService
+
+  提交规范：Conventional Commits（feat / fix / docs / refactor / chore）
+
+# ==================================================
+# 针对不同产物的规则
+# ==================================================
+rules:
+  proposal:
+    - 每个提案必须写清"免费版是否包含"
+    - 必须标注对应的限界上下文（user / knowledge / chat / llm / billing）
+    - 必须列出 "Non-goals"（明确不做什么）
+    - 如涉及付费能力，说明对应的商业版 SKU（进阶 / 专业 / 陪跑 / 企业）
+
+  tasks:
+    - 单个任务工作量不超过 4 小时
+    - 涉及跨层的任务拆分为"领域层变更" + "基础设施层适配" + "接入层暴露"三步
+    - 所有任务必须有验收标准（能跑的测试或能调的接口）
