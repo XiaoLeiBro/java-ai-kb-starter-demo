@@ -1,6 +1,6 @@
-# User Auth Spec
+# 用户认证规范
 
-## Scope
+## 范围
 
 当前稳定规格覆盖 `v0.1` 用户注册、登录、JWT 鉴权、当前用户查询和登出接口。
 
@@ -49,7 +49,7 @@
 - Behavior: 服务端无状态登出，客户端自行删除 JWT
 - Success: HTTP 204
 
-## Domain Rules
+## 领域规则
 
 - `User` 是领域聚合根，不依赖 Spring、HTTP、MyBatis-Plus 或数据库注解。
 - 用户 ID 由领域层通过 `UserId.generate()` 生成，持久层不得重新生成 ID。
@@ -58,21 +58,21 @@
 - 密码 hash 能力通过 `PasswordHasher` 接口注入，领域层不依赖 BCrypt 实现。
 - Token 签发能力通过 `TokenService` 接口注入，领域层不依赖 JWT 实现。
 
-## Persistence Rules
+## 持久层规则
 
 - 仓储接口定义在 `domain.user.repository.UserRepository`。
 - MyBatis-Plus PO、Mapper、Assembler 和 Repository 实现放在 `infrastructure.persistence.user`。
 - `users.username` 必须有唯一约束。
 - 注册并发下，应用层先做 `existsByUsername` 快判，持久层仍必须捕获唯一约束冲突并转换为 `BusinessException(USERNAME_EXISTS)`。
 
-## Security Rules
+## 安全规则
 
 - `/api/v1/health`、`POST /api/v1/auth/register`、`POST /api/v1/auth/login`、Swagger 文档路径允许匿名访问。
 - 其他接口默认需要认证。
 - JWT 使用无状态鉴权，服务端不维护 session。
 - 默认 JWT Secret 只允许本地体验；生产 profile 使用默认 secret 时必须阻止启动。
 
-## Non-goals
+## 非目标
 
 - 不做 RBAC。
 - 不做组织架构或多租户。

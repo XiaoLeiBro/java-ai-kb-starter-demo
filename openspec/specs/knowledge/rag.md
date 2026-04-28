@@ -1,6 +1,6 @@
-# Knowledge RAG Spec
+# 知识库 RAG 规范
 
-## Scope
+## 范围
 
 当前稳定规格覆盖 `v0.2` 免费 Demo 的最小知识库 RAG 主流程：
 
@@ -80,7 +80,7 @@
   - 知识库不存在或不属于当前用户：HTTP 404
   - LLM / Embedding / 向量检索失败：HTTP 502
 
-## Domain Rules
+## 领域规则
 
 - `KnowledgeBase` 是当前用户拥有的知识库，跨用户访问统一返回 404。
 - `KnowledgeDocument` 是上传文件对应的文档记录，上传索引成功后状态为 `READY`。
@@ -93,7 +93,7 @@
 - Prompt 必须限定模型只能基于知识库片段回答。
 - LLM 调用不放在数据库事务中。
 
-## Persistence Rules
+## 持久层规则
 
 - 知识库、文档、切片和向量数据使用 PostgreSQL + pgvector。
 - Flyway 负责创建 `knowledge_bases`、`knowledge_documents`、`document_chunks`、`kb_embeddings`。
@@ -101,14 +101,14 @@
 - PO 使用 `IdType.INPUT`，聚合根 ID 由领域层或应用层显式传入，持久层不得重新生成 ID。
 - application 和 domain 层不得依赖 MyBatis-Plus、LangChain4j 或 pgvector 类型。
 
-## Security Rules
+## 安全规则
 
 - `/api/v1/health`、`POST /api/v1/auth/register`、`POST /api/v1/auth/login`、Swagger 文档路径允许匿名访问。
 - 知识库、文档和问答接口必须认证。
 - 访问其他用户知识库、文档或向量片段时统一返回 404。
 - 对外错误不得泄露 SQL、API Key、模型供应商原始敏感信息或框架堆栈。
 
-## Non-goals
+## 非目标
 
 - 不做多租户、组织架构或 RBAC。
 - 不做 PDF、Word、Excel、PPT 等多格式解析。
