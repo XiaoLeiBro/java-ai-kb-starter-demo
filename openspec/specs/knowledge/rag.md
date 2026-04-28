@@ -10,7 +10,7 @@
 
 ## API
 
-### Create Knowledge Base
+### 创建知识库
 
 - Method: `POST`
 - Path: `/api/v1/knowledge-bases`
@@ -23,7 +23,7 @@
   - 未登录：HTTP 401
   - 参数校验失败：HTTP 400
 
-### List My Knowledge Bases
+### 列出我的知识库
 
 - Method: `GET`
 - Path: `/api/v1/knowledge-bases`
@@ -32,7 +32,7 @@
 - Failure:
   - 未登录：HTTP 401
 
-### Upload Document
+### 上传文档
 
 - Method: `POST`
 - Path: `/api/v1/knowledge-bases/{knowledgeBaseId}/documents`
@@ -48,7 +48,7 @@
   - 文件为空、格式不支持或超过配置大小：HTTP 400
   - Embedding / 向量写入失败：HTTP 502
 
-### List Documents
+### 列出文档
 
 - Method: `GET`
 - Path: `/api/v1/knowledge-bases/{knowledgeBaseId}/documents`
@@ -58,7 +58,7 @@
   - 未登录：HTTP 401
   - 知识库不存在或不属于当前用户：HTTP 404
 
-### Chat
+### 问答
 
 - Method: `POST`
 - Path: `/api/v1/chat`
