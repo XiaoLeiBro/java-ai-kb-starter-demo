@@ -7,9 +7,11 @@
  *
  * <pre>
  *   interface LlmProvider {
- *       ChatResponse chat(ChatRequest request);
- *       EmbeddingResponse embedding(EmbeddingRequest request);
- *       String providerName();
+ *       String chat(String systemPrompt, String userMessage);
+ *   }
+ *
+ *   interface EmbeddingProvider {
+ *       List<float[]> embedAll(List<String> texts);
  *   }
  * </pre>
  *

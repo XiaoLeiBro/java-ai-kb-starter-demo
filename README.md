@@ -42,7 +42,7 @@
 
 > Java 程序员做 AI 应用，除了“调通大模型接口”之外，在工程化、企业级能力和可交付性上，还差哪些东西？
 
-当前公开 Demo 已完成用户注册、登录、JWT 鉴权和 DDD 工程骨架；知识库和 RAG 主流程是后续版本目标：
+当前公开 Demo 已完成用户注册、登录、JWT 鉴权、DDD 工程骨架和最小 RAG 主流程：
 
 ```text
 创建知识库 → 上传文档 → 文本切分 → 向量化 → 向量检索 → 组装 Prompt → AI 问答
@@ -99,15 +99,17 @@
 ✅ 用户注册 / 登录 / JWT 鉴权（简化版）
 ✅ Docker Compose 启动 PostgreSQL / pgvector / Redis
 ✅ OpenSpec 规格驱动工作流
-✅ 知识库、对话、LLM、计费的领域包边界预留
-📋 创建单个知识库
-📋 上传 Markdown / TXT 文件
-📋 文本切分
-📋 单模型 Embedding 接入（OpenAI Compatible）
-📋 PostgreSQL + pgvector 向量存储与检索
-📋 单轮 AI 问答
-📋 对话历史
-📋 基础调用记录
+✅ 知识库、对话、LLM、计费的领域包边界
+✅ 创建和查询当前用户知识库
+✅ 上传 Markdown / TXT 文件
+✅ 本地文件存储
+✅ 固定字符数文本切分
+✅ 单模型 Embedding 接入（OpenAI Compatible）
+✅ PostgreSQL + pgvector 向量存储与检索
+✅ 单轮 AI 问答，返回答案和引用片段
+✅ 知识库归属校验，跨用户访问统一返回 404
+❌ 对话历史
+❌ 基础调用记录
 ```
 
 ---
@@ -301,7 +303,7 @@ cp src/main/resources/application-dev.yml.example \
    src/main/resources/application-dev.yml
 ```
 
-编辑 `application-dev.yml`，至少修改 JWT Secret。模型 API Key 会在 v0.2 RAG 流程中使用：
+编辑 `application-dev.yml`，至少修改 JWT Secret，并填入 OpenAI Compatible 的 Chat / Embedding 配置：
 
 ```yaml
 langchain4j:
@@ -409,7 +411,82 @@ curl -X POST http://localhost:8080/api/v1/auth/logout \
 
 ---
 
-知识库、上传文档和 AI 问答 API 尚未实现，属于 v0.2 范围。
+### 5. 创建知识库
+
+```bash
+curl -X POST http://localhost:8080/api/v1/knowledge-bases \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "公司制度知识库",
+    "description": "用于测试 Markdown / TXT 文档问答"
+  }'
+```
+
+返回中的 `data.id` 是后续上传和问答使用的 `knowledgeBaseId`。
+
+---
+
+### 6. 上传 Markdown / TXT 文档
+
+项目内置示例文档：
+
+```text
+examples/company-policy-demo.md
+```
+
+上传：
+
+```bash
+curl -X POST http://localhost:8080/api/v1/knowledge-bases/YOUR_KB_ID/documents \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -F "file=@examples/company-policy-demo.md;type=text/markdown"
+```
+
+成功后文档状态应为：
+
+```text
+READY
+```
+
+---
+
+### 7. 查询文档列表
+
+```bash
+curl http://localhost:8080/api/v1/knowledge-bases/YOUR_KB_ID/documents \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+### 8. 单轮 RAG 问答
+
+```bash
+curl -X POST http://localhost:8080/api/v1/chat \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "knowledgeBaseId": "YOUR_KB_ID",
+    "question": "公司的年假规则是什么？",
+    "topK": 5
+  }'
+```
+
+返回结构包含：
+
+```text
+answer      模型回答
+references  检索命中的知识片段
+```
+
+如果没有检索到片段，接口会直接返回：
+
+```text
+当前知识库中没有找到相关信息
+```
+
+不会继续调用 Chat Model。
 
 ---
 
@@ -492,6 +569,8 @@ ls openspec/specs/
 
 ```text
 openspec/specs/
+├── knowledge/
+│   └── rag.md
 └── user/
     └── auth.md
 ```
@@ -505,7 +584,7 @@ openspec/specs/
 | 阶段 | 目标 | 状态 |
 |---|---|---|
 | v0.1 | 用户注册 / 登录 / JWT 鉴权 | ✅ 已完成 |
-| v0.2 | 跑通上传 → 切分 → 向量化 → 检索 → 问答主流程 | 📋 计划中 |
+| v0.2 | 跑通上传 → 切分 → 向量化 → 检索 → 问答主流程 | ✅ 已完成 |
 | v0.3 | 对话历史、基础调用记录 | 📋 计划中 |
 | v0.4 | Docker Compose 一键启动、截图、演示视频 | 📋 计划中 |
 | v1.0 | 商业版本开放咨询 | 📋 计划中 |
@@ -519,15 +598,15 @@ openspec/specs/
 | Spring Boot 后端 | ✅ | ✅ |
 | DDD 分层结构 | ✅ | ✅ |
 | 用户登录 | ✅ 简化版 | ✅ 完整版 |
-| 知识库管理 | 📋 v0.2 单知识库 | ✅ 多知识库 / 多租户 |
-| 文件上传 | 📋 v0.2 TXT / Markdown | ✅ PDF / Word / Excel / PPT |
-| 文本切分 | 📋 v0.2 简单切分 | ✅ 可配置切分策略 |
-| Embedding | 📋 v0.2 单模型 | ✅ 多模型 |
-| 向量库 | 📋 v0.2 pgvector | ✅ pgvector / Milvus / ES |
-| AI 问答 | 📋 v0.2 单轮 | ✅ 多轮 / 引用来源 / Prompt 模板 |
+| 知识库管理 | ✅ 当前用户知识库 | ✅ 多知识库 / 多租户 |
+| 文件上传 | ✅ TXT / Markdown | ✅ PDF / Word / Excel / PPT |
+| 文本切分 | ✅ 简单切分 | ✅ 可配置切分策略 |
+| Embedding | ✅ 单模型 | ✅ 多模型 |
+| 向量库 | ✅ pgvector | ✅ pgvector / Milvus / ES |
+| AI 问答 | ✅ 单轮 / 引用来源 | ✅ 多轮 / Prompt 模板 |
 | Token 统计 | ❌ | ✅ |
 | 成本报表 | ❌ | ✅ |
-| 调用日志 | 📋 v0.3 基础记录 | ✅ 完整审计 |
+| 调用日志 | ❌ | ✅ 完整审计 |
 | 限流 / 熔断 / 重试 | ❌ | ✅ |
 | 管理后台 | ❌ | ✅ |
 | 二开文档 | ❌ | ✅ |
@@ -569,7 +648,7 @@ Docker / K8s 部署脚本
 
 | 版本 | 适合人群 | 内容说明 |
 |---|---|---|
-| 免费 Demo | 学习、体验、验证方向 | 本仓库提供，当前 v0.1 先跑通用户鉴权，v0.2 补 RAG 主流程 |
+| 免费 Demo | 学习、体验、验证方向 | 本仓库提供，当前 v0.2 已跑通用户鉴权和 RAG 主流程 |
 | 进阶版 | 想学习完整项目、自己二开 | 完整源码、启动文档、基础二开说明 |
 | 专业版 | 接单、公司内部项目、小团队落地 | 多模型适配、Token 统计、调用日志、管理后台、视频讲解 |
 | 陪跑版 | 需要部署指导、架构答疑、二开规划 | 专业版内容 + 1v1 架构答疑 + 部署指导 |
@@ -583,7 +662,7 @@ Docker / K8s 部署脚本
 
 ## 截图
 
-当前版本暂无前端页面截图。v0.2 跑通知识库和问答主流程后再补充演示截图。
+当前版本暂无前端页面截图。v0.2 已跑通 API 主流程，后续补充演示截图或前端页面。
 
 ---
 
@@ -601,7 +680,7 @@ Docker / K8s 部署脚本
 
 Token 统计、成本报表、调用日志、审计、限流和失败重试属于真实项目交付能力，是商业版本的核心价值。
 
-当前免费版先用于学习和体验工程骨架；RAG 主流程按路线图进入 v0.2。
+当前免费版先用于学习和体验工程骨架与最小 RAG 主链路，不包含商业交付所需的完整治理能力。
 
 ---
 

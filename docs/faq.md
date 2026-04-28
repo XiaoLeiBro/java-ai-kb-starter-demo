@@ -9,8 +9,10 @@ A：不可以。免费版采用 Source Available License，禁止商业使用、
 ---
 
 **Q：支持国内哪些大模型？**  
-A：当前 `v0.1` 尚未实际调用模型。`v0.2` 起免费版只接入 OpenAI Compatible 协议，你可以根据自己的账号情况配置兼容 OpenAI 接口的模型服务。  
-商业版会提供更多模型供应商适配，包括 SiliconFlow、DeepSeek、Qwen、Ollama 等。
+A：当前 `v0.2` 已通过 OpenAI Compatible 协议接入 Chat Model 和 Embedding Model。  
+免费版只读取配置中的一组 Chat / Embedding 模型，不提供多供应商管理后台。你可以按账号情况配置兼容 OpenAI 接口的模型服务，例如 SiliconFlow、DeepSeek、Qwen 或本地 OpenAI Compatible 服务。
+
+商业版会提供更多模型供应商适配、多模型配置、调用审计和成本统计。
 
 ---
 
@@ -74,20 +76,20 @@ A：免费版默认使用 PostgreSQL + pgvector，因为它能把业务数据和
 ---
 
 **Q：Demo 的向量维度是多少？**  
-A：默认按 `BAAI/bge-m3` 的向量维度设计。  
+A：默认是 `1024`，按 `BAAI/bge-m3` 的向量维度设计。Flyway V2 中的 pgvector 字段也是 `vector(1024)`。  
 如果你使用其他 Embedding 模型，需要同步修改：
 
 ```text
-向量表字段维度
-application.yml 中的 vector dimension
+向量表字段维度，例如 vector(768) 或 vector(1536)
+application.yml 中的 ai-kb.vector.dimension
 Embedding 模型名称
 ```
 
 ---
 
 **Q：可以离线部署吗？**  
-A：当前 `v0.1` 可离线运行注册登录链路。`v0.2` 接入 RAG 后，免费版默认需要联网调用大模型 API。  
-如果需要完全离线部署，可以使用企业版方案，对接本地 Ollama、vLLM 或其他私有化模型服务。
+A：注册、登录、知识库元数据和本地文件存储可以离线运行。RAG 问答主流程默认需要调用你配置的大模型 / Embedding 服务。  
+如果需要完全离线，需要把 OpenAI Compatible `base-url` 指向本地 Ollama、vLLM 或其他私有化模型服务，并保证 Chat 与 Embedding 都可用。企业版可以提供完整私有化部署方案。
 
 ---
 
@@ -104,7 +106,7 @@ A：MyBatis-Plus 在国内 Java 项目中接受度较高，适合面向国内 Ja
 ---
 
 **Q：用户表需要一开始就分库分表吗？需要用 MyBatis-Plus 雪花算法吗？**  
-A：当前免费 Demo 不需要。v0.1 只有注册、登录和 JWT 鉴权，分库分表会让本地运行、教学理解和二开门槛都变高。  
+A：当前免费 Demo 不需要。用户认证和最小 RAG 主流程都以单库 PostgreSQL 为默认方案，分库分表会让本地运行、教学理解和二开门槛都变高。  
 
 如果商业版遇到真实大用户量、多租户或企业级水平扩展需求，可以引入雪花 ID 和分库分表。但建议通过领域 / 应用层的 `IdGenerator` 端口生成 ID，再由 MyBatis-Plus 原样保存，不建议让 PO 层使用 `ASSIGN_ID` 直接生成聚合根 ID。
 

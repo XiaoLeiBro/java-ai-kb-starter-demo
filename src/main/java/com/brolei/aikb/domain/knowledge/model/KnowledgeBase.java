@@ -1,7 +1,7 @@
 package com.brolei.aikb.domain.knowledge.model;
 
 import com.brolei.aikb.domain.user.model.UserId;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import java.util.Objects;
 
 /**
@@ -24,8 +24,8 @@ public final class KnowledgeBase {
   private String name;
   private String description;
   private KnowledgeBaseStatus status;
-  private final OffsetDateTime createdAt;
-  private OffsetDateTime updatedAt;
+  private final Instant createdAt;
+  private Instant updatedAt;
 
   private KnowledgeBase(
       KnowledgeBaseId id,
@@ -33,8 +33,8 @@ public final class KnowledgeBase {
       String name,
       String description,
       KnowledgeBaseStatus status,
-      OffsetDateTime createdAt,
-      OffsetDateTime updatedAt) {
+      Instant createdAt,
+      Instant updatedAt) {
     this.id = id;
     this.ownerId = ownerId;
     this.name = name;
@@ -50,7 +50,7 @@ public final class KnowledgeBase {
     if (name == null || name.isBlank()) {
       throw new IllegalArgumentException("name must not be blank");
     }
-    OffsetDateTime now = OffsetDateTime.now();
+    Instant now = Instant.now();
     return new KnowledgeBase(
         KnowledgeBaseId.generate(),
         ownerId,
@@ -68,8 +68,8 @@ public final class KnowledgeBase {
       String name,
       String description,
       KnowledgeBaseStatus status,
-      OffsetDateTime createdAt,
-      OffsetDateTime updatedAt) {
+      Instant createdAt,
+      Instant updatedAt) {
     return new KnowledgeBase(id, ownerId, name, description, status, createdAt, updatedAt);
   }
 
@@ -79,7 +79,7 @@ public final class KnowledgeBase {
       throw new IllegalArgumentException("name must not be blank");
     }
     this.name = newName.trim();
-    this.updatedAt = OffsetDateTime.now();
+    this.updatedAt = Instant.now();
   }
 
   /** 停用（归档）知识库. */
@@ -88,7 +88,7 @@ public final class KnowledgeBase {
       return;
     }
     this.status = KnowledgeBaseStatus.ARCHIVED;
-    this.updatedAt = OffsetDateTime.now();
+    this.updatedAt = Instant.now();
   }
 
   public boolean isActive() {
@@ -115,11 +115,11 @@ public final class KnowledgeBase {
     return status;
   }
 
-  public OffsetDateTime createdAt() {
+  public Instant createdAt() {
     return createdAt;
   }
 
-  public OffsetDateTime updatedAt() {
+  public Instant updatedAt() {
     return updatedAt;
   }
 }

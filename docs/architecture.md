@@ -2,15 +2,16 @@
 
 ## 0. 当前实现状态
 
-当前仓库处于 `v0.1`：
+当前仓库处于 `v0.2`：
 
 ```text
 已实现：用户注册 / 登录 / JWT 鉴权、健康检查、DDD 分层骨架、PostgreSQL + Flyway 初始化
-已预留：knowledge / chat / llm / billing 限界上下文包边界
-未实现：知识库 CRUD、文件上传、文本切分、Embedding、向量检索、AI 问答、对话历史、调用记录
+已实现：知识库创建 / 列表、Markdown/TXT 上传、本地文件存储、文本切分、Embedding、pgvector 写入与检索、单轮 RAG 问答
+已预留：chat / billing 限界上下文后续扩展边界
+未实现：对话历史、多轮记忆、文档删除与向量清理、异步索引、调用记录、Token 计费、管理后台
 ```
 
-本文档描述的是免费 Demo 的目标架构。涉及 RAG 主流程的 Controller / Service / Provider / VectorStore 会从 `v0.2` 开始落地。
+本文档描述的是免费 Demo 的目标架构。当前 `v0.2` 已落地 RAG 主流程的 Controller / Service / Provider / VectorStore，商业版能力仍保持边界外。
 
 ---
 
@@ -267,7 +268,7 @@ infrastructure.persistence
 
 这样设计是刻意的：
 
-- v0.1 只有用户注册 / 登录链路，分库分表会增加部署、测试和理解成本
+- 当前免费 Demo 聚焦用户认证和最小 RAG 主流程，分库分表会增加部署、测试和理解成本
 - DDD 分层下，聚合根应在保存前就拥有 ID，不能依赖 MyBatis-Plus 在 `insert` 时补 ID
 - 免费 Demo 的目标是清楚展示工程边界，不把企业级复杂度提前塞进样例主线
 

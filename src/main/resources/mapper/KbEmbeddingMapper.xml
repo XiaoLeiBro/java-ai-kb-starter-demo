@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.brolei.aikb.infrastructure.persistence.knowledge.mapper.KbEmbeddingMapper">
+
+    <insert id="insertBatch" parameterType="list">
+        INSERT INTO kb_embeddings (id, knowledge_base_id, document_id, chunk_id, embedding, created_at)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.id}, #{item.knowledgeBaseId}, #{item.documentId}, #{item.chunkId},
+             #{item.embedding,typeHandler=com.brolei.aikb.infrastructure.vector.PgvectorTypeHandler},
+             #{item.createdAt})
+        </foreach>
+    </insert>
+
+    <select id="searchByKbId" resultType="com.brolei.aikb.infrastructure.persistence.knowledge.po.KbEmbeddingPo">
+        SELECT
+            e.id,
+            e.knowledge_base_id AS knowledgeBaseId,
+            e.document_id AS documentId,
+            e.chunk_id AS chunkId,
+            e.embedding,
+            e.created_at AS createdAt,
+            1 - (e.embedding &lt;=&gt; #{embedding,typeHandler=com.brolei.aikb.infrastructure.vector.PgvectorTypeHandler}) AS score
+        FROM kb_embeddings e
+        WHERE e.knowledge_base_id = #{knowledgeBaseId}
+        ORDER BY score DESC
+        LIMIT #{topK}
+    </select>
+
+</mapper>

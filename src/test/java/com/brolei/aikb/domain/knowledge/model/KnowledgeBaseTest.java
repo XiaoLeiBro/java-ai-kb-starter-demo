@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.brolei.aikb.domain.user.model.UserId;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 class KnowledgeBaseTest {
@@ -24,16 +24,17 @@ class KnowledgeBaseTest {
   }
 
   @Test
-  void renameShouldUpdateNameAndTimestamp() {
+  void renameShouldUpdateNameAndTimestamp() throws InterruptedException {
     KnowledgeBase knowledgeBase = KnowledgeBase.create(UserId.of("owner-1"), "old", null);
-    OffsetDateTime oldUpdatedAt = knowledgeBase.updatedAt();
+    Instant oldUpdatedAt = knowledgeBase.updatedAt();
 
+    // Ensure clock tick to verify updatedAt changes
+    Thread.sleep(10);
     knowledgeBase.rename("  new  ");
 
     assertEquals("new", knowledgeBase.name());
     assertTrue(
-        knowledgeBase.updatedAt().isAfter(oldUpdatedAt)
-            || knowledgeBase.updatedAt().isEqual(oldUpdatedAt));
+        knowledgeBase.updatedAt().isAfter(oldUpdatedAt), "updatedAt should be newer after rename");
   }
 
   @Test

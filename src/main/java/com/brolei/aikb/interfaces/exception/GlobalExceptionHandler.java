@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /** REST 控制器的全局异常处理. */
 @ControllerAdvice
@@ -43,6 +44,12 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ApiResult<Void>> handleIllegalArgument(IllegalArgumentException e) {
     return ResponseEntity.status(400)
         .body(ApiResult.error(400, "VALIDATION_ERROR: " + e.getMessage()));
+  }
+
+  /** 处理文件上传大小超限异常. */
+  @ExceptionHandler(MaxUploadSizeExceededException.class)
+  public ResponseEntity<ApiResult<Void>> handleMaxUploadSize(MaxUploadSizeExceededException e) {
+    return ResponseEntity.status(400).body(ApiResult.error(400, "文件过大: " + e.getMessage()));
   }
 
   /** 处理未预期的异常. */
