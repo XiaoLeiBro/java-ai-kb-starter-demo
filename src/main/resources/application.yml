@@ -11,9 +11,9 @@ spring:
 
   # ---------------- 数据源 ----------------
   datasource:
-    url: jdbc:postgresql://localhost:15432/ai_kb
-    username: ai_kb
-    password: ${AI_KB_DB_PASSWORD:ai_kb_demo_2026}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:15432/ai_kb}
+    username: ${SPRING_DATASOURCE_USERNAME:ai_kb}
+    password: ${SPRING_DATASOURCE_PASSWORD:${AI_KB_DB_PASSWORD:ai_kb_demo_2026}}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -26,8 +26,8 @@ spring:
   # ---------------- Redis ----------------
   data:
     redis:
-      host: localhost
-      port: 16379
+      host: ${SPRING_REDIS_HOST:${SPRING_DATA_REDIS_HOST:localhost}}
+      port: ${SPRING_REDIS_PORT:${SPRING_DATA_REDIS_PORT:16379}}
       timeout: 3s
 
   servlet:
@@ -94,11 +94,11 @@ ai-kb:
     max-list-results: ${AI_KB_CHAT_MAX_LIST_RESULTS:100}
   vector:
     # pgvector 向量存储配置（由 infrastructure.vector 读取并构建 EmbeddingStore Bean）
-    host: localhost
-    port: 15432
-    database: ai_kb
-    user: ai_kb
-    password: ${AI_KB_DB_PASSWORD:ai_kb_demo_2026}
+    host: ${AI_KB_VECTOR_HOST:localhost}
+    port: ${AI_KB_VECTOR_PORT:15432}
+    database: ${AI_KB_VECTOR_DATABASE:ai_kb}
+    user: ${AI_KB_VECTOR_USER:ai_kb}
+    password: ${SPRING_DATASOURCE_PASSWORD:${AI_KB_DB_PASSWORD:ai_kb_demo_2026}}
     table: kb_embeddings
     dimension: 1024           # 匹配 bge-m3
     create-table: true

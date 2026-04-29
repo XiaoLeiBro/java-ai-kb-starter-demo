@@ -4,6 +4,63 @@
 # 清理数据：docker compose down -v
 
 services:
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: ai-kb-demo-web:latest
+    container_name: ai-kb-web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-18081}:80"
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ai-kb-demo:latest
+    container_name: ai-kb-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-18080}:8080"
+    environment:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/ai_kb}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-ai_kb}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-ai_kb_demo_2026}
+      SPRING_DATA_REDIS_HOST: ${SPRING_REDIS_HOST:-redis}
+      SPRING_DATA_REDIS_PORT: ${SPRING_REDIS_PORT:-6379}
+      AI_KB_DB_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-ai_kb_demo_2026}
+      AI_KB_VECTOR_HOST: ${AI_KB_VECTOR_HOST:-postgres}
+      AI_KB_VECTOR_PORT: ${AI_KB_VECTOR_PORT:-5432}
+      AI_KB_UPLOAD_DIR: ${AI_KB_UPLOAD_DIR:-/app/data/uploads}
+      AI_KB_JWT_SECRET: ${AI_KB_JWT_SECRET:-change-me-in-demo-compose-default-secret-32-bytes}
+      AI_KB_LLM_API_KEY: ${AI_KB_LLM_API_KEY:-your-chat-api-key-here}
+      AI_KB_LLM_BASE_URL: ${AI_KB_LLM_BASE_URL:-https://api.deepseek.com}
+      AI_KB_CHAT_MODEL: ${AI_KB_CHAT_MODEL:-deepseek-v4-flash}
+      AI_KB_EMBEDDING_API_KEY: ${AI_KB_EMBEDDING_API_KEY:-your-embedding-api-key-here}
+      AI_KB_EMBEDDING_BASE_URL: ${AI_KB_EMBEDDING_BASE_URL:-https://api.siliconflow.cn/v1}
+      AI_KB_EMBEDDING_MODEL: ${AI_KB_EMBEDDING_MODEL:-BAAI/bge-m3}
+    volumes:
+      - app-data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "java", "-cp", "/app/healthcheck", "com.brolei.aikb.ContainerHealthCheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
+
   postgres:
     image: pgvector/pgvector:pg16
     container_name: ai-kb-postgres
@@ -11,9 +68,9 @@ services:
     environment:
       POSTGRES_DB: ai_kb
       POSTGRES_USER: ai_kb
-      POSTGRES_PASSWORD: ai_kb_demo_2026
+      POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-ai_kb_demo_2026}
     ports:
-      - "15432:5432"
+      - "${PG_PORT:-15432}:5432"
     volumes:
       - pg-data:/var/lib/postgresql/data
       - ./docker/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
@@ -28,7 +85,7 @@ services:
     container_name: ai-kb-redis
     restart: unless-stopped
     ports:
-      - "16379:6379"
+      - "${REDIS_PORT:-16379}:6379"
     volumes:
       - redis-data:/data
     healthcheck:
@@ -38,5 +95,6 @@ services:
       retries: 5
 
 volumes:
+  app-data:
   pg-data:
   redis-data:

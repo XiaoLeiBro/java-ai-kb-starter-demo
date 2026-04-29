@@ -1,0 +1,17 @@
+.git
+.idea
+.claude
+.mvn
+target
+data
+logs
+node_modules
+.env
+.env.local
+application-dev.yml
+application-local.yml
+application-prod.yml
+secrets
+*.log
+*.iml
+.DS_Store

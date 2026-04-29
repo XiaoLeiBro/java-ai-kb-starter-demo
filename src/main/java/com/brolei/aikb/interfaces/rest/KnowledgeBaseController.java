@@ -11,6 +11,9 @@ import com.brolei.aikb.interfaces.dto.ApiResult;
 import com.brolei.aikb.interfaces.dto.knowledge.CreateKnowledgeBaseRequest;
 import com.brolei.aikb.interfaces.dto.knowledge.DocumentResponse;
 import com.brolei.aikb.interfaces.dto.knowledge.KnowledgeBaseResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.io.IOException;
 import java.util.List;
@@ -26,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 /** 知识库相关接口的 REST 控制器. */
+@Tag(name = "知识库管理", description = "创建知识库、查看知识库列表、上传文档和查看文档状态")
 @RestController
 @RequestMapping("/api/v1/knowledge-bases")
 public class KnowledgeBaseController {
@@ -37,6 +41,7 @@ public class KnowledgeBaseController {
   }
 
   /** 创建新知识库. */
+  @Operation(summary = "创建知识库", description = "为当前登录用户创建一个知识库，用于后续上传文档和 AI 问答。")
   @PostMapping
   public ResponseEntity<ApiResult<KnowledgeBaseResponse>> create(
       Authentication authentication, @Valid @RequestBody CreateKnowledgeBaseRequest request) {
@@ -48,6 +53,7 @@ public class KnowledgeBaseController {
   }
 
   /** 获取当前用户的知识库列表. */
+  @Operation(summary = "查询我的知识库", description = "返回当前登录用户创建的全部知识库。")
   @GetMapping
   public ResponseEntity<ApiResult<List<KnowledgeBaseResponse>>> listMine(
       Authentication authentication) {
@@ -58,11 +64,15 @@ public class KnowledgeBaseController {
   }
 
   /** 向指定知识库上传文档，并触发索引. */
+  @Operation(summary = "上传知识库文档", description = "上传文档到指定知识库，系统会解析、切分并写入向量索引。")
   @PostMapping("/{id}/documents")
   public ResponseEntity<ApiResult<DocumentResponse>> uploadDocument(
       Authentication authentication,
-      @PathVariable String id,
-      @RequestParam("file") MultipartFile file) {
+      @Parameter(description = "知识库 ID", example = "4c9f0d1a-0a3a-4c48-bb6a-7c8b69e1b001")
+          @PathVariable
+          String id,
+      @Parameter(description = "要上传的文档文件，demo 推荐使用 Markdown 或纯文本文件") @RequestParam("file")
+          MultipartFile file) {
     UserId ownerId = (UserId) authentication.getPrincipal();
     KnowledgeBaseId kbId = KnowledgeBaseId.of(id);
     String originalFilename = file.getOriginalFilename();
@@ -79,9 +89,13 @@ public class KnowledgeBaseController {
   }
 
   /** 获取指定知识库下的文档列表. */
+  @Operation(summary = "查询知识库文档", description = "查看指定知识库下已上传文档的处理状态和切分数量。")
   @GetMapping("/{id}/documents")
   public ResponseEntity<ApiResult<List<DocumentResponse>>> listDocuments(
-      Authentication authentication, @PathVariable String id) {
+      Authentication authentication,
+      @Parameter(description = "知识库 ID", example = "4c9f0d1a-0a3a-4c48-bb6a-7c8b69e1b001")
+          @PathVariable
+          String id) {
     UserId ownerId = (UserId) authentication.getPrincipal();
     KnowledgeBaseId kbId = KnowledgeBaseId.of(id);
     List<KnowledgeDocument> docs = knowledgeApplicationService.listDocuments(ownerId, kbId);

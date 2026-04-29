@@ -7,6 +7,9 @@ import com.brolei.aikb.domain.knowledge.model.KnowledgeBaseId;
 import com.brolei.aikb.domain.user.model.UserId;
 import com.brolei.aikb.interfaces.dto.ApiResult;
 import com.brolei.aikb.interfaces.dto.chat.InvocationLogResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -20,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /** 调用记录查询接口的 REST 控制器. */
+@Tag(name = "调用记录", description = "查询 AI 调用记录、模型名称、Token 用量、耗时和失败原因")
 @RestController
 @RequestMapping("/api/v1/invocation-logs")
 public class InvocationLogController {
@@ -35,12 +39,23 @@ public class InvocationLogController {
   }
 
   /** 查询调用记录列表. */
+  @Operation(summary = "查询调用记录", description = "按知识库和日期范围查询当前用户的 AI 调用记录，用于 demo 展示和成本追踪。")
   @GetMapping
   public ResponseEntity<ApiResult<List<InvocationLogResponse>>> listInvocationLogs(
       Authentication authentication,
-      @RequestParam(required = false) String knowledgeBaseId,
-      @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate dateFrom,
-      @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate dateTo) {
+      @Parameter(
+              description = "知识库 ID，不传则查询全部知识库",
+              example = "4c9f0d1a-0a3a-4c48-bb6a-7c8b69e1b001")
+          @RequestParam(required = false)
+          String knowledgeBaseId,
+      @Parameter(description = "开始日期，格式 yyyy-MM-dd", example = "2026-04-01")
+          @RequestParam(required = false)
+          @DateTimeFormat(pattern = "yyyy-MM-dd")
+          LocalDate dateFrom,
+      @Parameter(description = "结束日期，格式 yyyy-MM-dd", example = "2026-04-30")
+          @RequestParam(required = false)
+          @DateTimeFormat(pattern = "yyyy-MM-dd")
+          LocalDate dateTo) {
     UserId userId = (UserId) authentication.getPrincipal();
     KnowledgeBaseId kbId = knowledgeBaseId != null ? KnowledgeBaseId.of(knowledgeBaseId) : null;
     Instant from = dateFrom != null ? dateFrom.atStartOfDay().toInstant(ZoneOffset.UTC) : null;

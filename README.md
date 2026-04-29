@@ -97,7 +97,6 @@
 ✅ Spring Boot 后端
 ✅ DDD 分层结构：interfaces / application / domain / infrastructure
 ✅ 用户注册 / 登录 / JWT 鉴权（简化版）
-✅ Docker Compose 启动 PostgreSQL / pgvector / Redis
 ✅ OpenSpec 规格驱动工作流
 ✅ 知识库、对话、LLM、计费的领域包边界
 ✅ 创建和查询当前用户知识库
@@ -112,6 +111,7 @@
 ✅ 按会话查看历史消息列表（append-only）
 ✅ 每次 LLM 调用自动记录（模型、token、耗时、状态）
 ✅ 调用记录按知识库和日期范围查询
+✅ Docker Compose 一键启动 Spring Boot / PostgreSQL / pgvector / Redis
 ```
 
 ---
@@ -211,7 +211,7 @@ domain.billing     Token 与成本上下文
 | 向量能力 | pgvector | 与业务库同实例，降低部署成本 |
 | ORM | MyBatis-Plus | 国内 Java 项目接受度高，适合工程落地 |
 | 数据迁移 | Flyway | 数据库版本管理 |
-| 缓存 | Redis 7 | Docker Compose 预留服务；当前后端未启用 Redis Starter |
+| 缓存 | Redis 7 | Docker Compose 内置，应用健康检查可验证连接 |
 | 鉴权 | Spring Security + JWT | 无状态接口鉴权 |
 | 文档解析 | Apache Tika / PDFBox / POI | 商业版增强 |
 | 部署 | Docker Compose | 本地一键启动 |
@@ -253,11 +253,11 @@ Spring Boot 4.x 与 Java 21 / Spring Framework 7 方向一致
 请先准备：
 
 ```text
-JDK 21+
-Maven 3.9+
-Docker + Docker Compose
+Docker Desktop / Docker Engine + Docker Compose（建议给 Docker 预留 4GB+ 内存）
 一个 OpenAI Compatible 的大模型 API Key（v0.2 RAG 流程需要）
 ```
+
+> Docker Compose 启动路径不要求本机安装 JDK 或 Maven；应用镜像会在 Docker 构建阶段完成 Maven 编译。
 
 可选模型平台：
 
@@ -280,65 +280,59 @@ cd java-ai-kb-starter-demo
 
 ---
 
-### 3. 启动依赖服务
+### 3. 配置环境变量
+
+```bash
+cp .env.example .env
+```
+
+编辑 `.env`，至少替换以下 6 个模型配置：
+
+```text
+AI_KB_LLM_API_KEY=your-chat-api-key-here
+AI_KB_LLM_BASE_URL=https://api.deepseek.com
+AI_KB_CHAT_MODEL=deepseek-v4-flash
+
+AI_KB_EMBEDDING_API_KEY=your-embedding-api-key-here
+AI_KB_EMBEDDING_BASE_URL=https://api.siliconflow.cn/v1
+AI_KB_EMBEDDING_MODEL=BAAI/bge-m3
+```
+
+如果只想先看接口和启动效果，可以暂时保留占位值；应用会启动，但真实 AI 问答会因为 API Key 无效而失败。
+
+---
+
+### 4. 一键启动全部服务
 
 ```bash
 docker compose up -d
 ```
 
+首次启动会自动构建 `ai-kb-demo:latest` 后端镜像和 `ai-kb-demo-web:latest` 前端镜像，并拉起 Vue 前端、Spring Boot、PostgreSQL 和 Redis。
+
 默认会启动：
 
 ```text
-PostgreSQL 16
-pgvector
-Redis 7
+Vue 前端：http://localhost:18081
+Spring Boot 后端：http://localhost:18080
+Swagger UI：http://localhost:18080/swagger-ui.html
+PostgreSQL 16 + pgvector：localhost:15432
+Redis 7：localhost:16379
 ```
 
----
+> `18080` 是后端应用端口，不是 Swagger 独占端口；Swagger 只是后端应用暴露的一个页面。前端独立映射到 `18081`，并通过 `/api` 代理访问后端。
 
-### 4. 配置本地开发参数
-
-复制配置文件：
+查看状态：
 
 ```bash
-cp src/main/resources/application-dev.yml.example \
-   src/main/resources/application-dev.yml
+docker compose ps
 ```
 
-编辑 `application-dev.yml`，至少修改 JWT Secret，并填入 OpenAI Compatible 的 Chat / Embedding 配置：
-
-```yaml
-langchain4j:
-  open-ai:
-    chat-model:
-      api-key: sk-your-real-key-here
-      base-url: https://api.siliconflow.cn/v1
-      model-name: Qwen/Qwen2.5-7B-Instruct
-    embedding-model:
-      api-key: sk-your-real-key-here
-      base-url: https://api.siliconflow.cn/v1
-      model-name: BAAI/bge-m3
-
-ai-kb:
-  security:
-    jwt:
-      secret: your-jwt-secret-at-least-32-bytes
-```
-
-> 注意：不要把真实 API Key 提交到 GitHub。
-
----
-
-### 5. 启动后端
+健康检查：
 
 ```bash
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
-```
-
-启动成功后访问：
-
-```text
-http://localhost:8080/api/v1/health
+curl http://localhost:18080/actuator/health
+curl http://localhost:18080/api/v1/health
 ```
 
 预期返回：
@@ -352,6 +346,31 @@ http://localhost:8080/api/v1/health
 }
 ```
 
+停止服务但保留数据：
+
+```bash
+docker compose down
+```
+
+停止服务并清空数据卷：
+
+```bash
+docker compose down -v
+```
+
+如果 `18080` 或 `18081` 端口冲突，修改 `.env`：
+
+```text
+APP_PORT=28080
+WEB_PORT=28081
+```
+
+然后重新执行：
+
+```bash
+docker compose up -d
+```
+
 ---
 
 ## API 快速体验
@@ -359,7 +378,7 @@ http://localhost:8080/api/v1/health
 ### 1. 注册用户
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/auth/register \
+curl -X POST http://localhost:18080/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "username": "demo_user",
@@ -373,7 +392,7 @@ curl -X POST http://localhost:8080/api/v1/auth/register \
 ### 2. 登录获取 Token
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/auth/login \
+curl -X POST http://localhost:18080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "username": "demo_user",
@@ -398,7 +417,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 ### 3. 查询当前用户
 
 ```bash
-curl http://localhost:8080/api/v1/auth/me \
+curl http://localhost:18080/api/v1/auth/me \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -407,7 +426,7 @@ curl http://localhost:8080/api/v1/auth/me \
 ### 4. 登出
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/auth/logout \
+curl -X POST http://localhost:18080/api/v1/auth/logout \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -416,7 +435,7 @@ curl -X POST http://localhost:8080/api/v1/auth/logout \
 ### 5. 创建知识库
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/knowledge-bases \
+curl -X POST http://localhost:18080/api/v1/knowledge-bases \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -440,7 +459,7 @@ examples/company-policy-demo.md
 上传：
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/knowledge-bases/YOUR_KB_ID/documents \
+curl -X POST http://localhost:18080/api/v1/knowledge-bases/YOUR_KB_ID/documents \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -F "file=@examples/company-policy-demo.md;type=text/markdown"
 ```
@@ -456,7 +475,7 @@ READY
 ### 7. 查询文档列表
 
 ```bash
-curl http://localhost:8080/api/v1/knowledge-bases/YOUR_KB_ID/documents \
+curl http://localhost:18080/api/v1/knowledge-bases/YOUR_KB_ID/documents \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -465,7 +484,7 @@ curl http://localhost:8080/api/v1/knowledge-bases/YOUR_KB_ID/documents \
 ### 8. 单轮 RAG 问答
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/chat \
+curl -X POST http://localhost:18080/api/v1/chat \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -495,7 +514,7 @@ references  检索命中的知识片段
 ### 9. 创建对话会话
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/conversations \
+curl -X POST http://localhost:18080/api/v1/conversations \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -511,7 +530,7 @@ curl -X POST http://localhost:8080/api/v1/conversations \
 ### 10. 带会话问答
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/chat \
+curl -X POST http://localhost:18080/api/v1/chat \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -529,7 +548,7 @@ curl -X POST http://localhost:8080/api/v1/chat \
 ### 11. 查询会话消息
 
 ```bash
-curl http://localhost:8080/api/v1/conversations/YOUR_CONVERSATION_ID/messages \
+curl http://localhost:18080/api/v1/conversations/YOUR_CONVERSATION_ID/messages \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -540,7 +559,7 @@ curl http://localhost:8080/api/v1/conversations/YOUR_CONVERSATION_ID/messages \
 ### 12. 查询调用记录
 
 ```bash
-curl "http://localhost:8080/api/v1/invocation-logs?knowledgeBaseId=YOUR_KB_ID&dateFrom=2026-01-01&dateTo=2026-01-31" \
+curl "http://localhost:18080/api/v1/invocation-logs?knowledgeBaseId=YOUR_KB_ID&dateFrom=2026-01-01&dateTo=2026-01-31" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
@@ -554,13 +573,22 @@ curl "http://localhost:8080/api/v1/invocation-logs?knowledgeBaseId=YOUR_KB_ID&da
 java-ai-kb-starter-demo/
 ├── README.md
 ├── LICENSE
+├── .env.example
 ├── docker-compose.yml
 ├── pom.xml
+├── frontend/
+│   ├── src/
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   ├── package.json
+│   └── vite.config.ts
 ├── docs/
 │   ├── quick-start.md
 │   ├── architecture.md
 │   ├── paid-version.md
-│   └── faq.md
+│   ├── faq.md
+│   ├── screenshots/
+│   └── demo/
 ├── src/
 │   ├── main/
 │   │   ├── java/com/brolei/aikb/
@@ -590,8 +618,6 @@ java-ai-kb-starter-demo/
 │   └── test/
 ├── examples/
 │   └── company-policy-demo.md
-├── screenshots/
-│   └── .gitkeep
 └── openspec/
     ├── config.yaml
     ├── changes/                # 进行中的规格变更
@@ -644,7 +670,7 @@ openspec/specs/
 | v0.1 | 用户注册 / 登录 / JWT 鉴权 | ✅ 已完成 |
 | v0.2 | 跑通上传 → 切分 → 向量化 → 检索 → 问答主流程 | ✅ 已完成 |
 | v0.3 | 对话历史、基础调用记录 | ✅ 已完成 |
-| v0.4 | Docker Compose 一键启动、截图、演示视频 | 📋 计划中 |
+| v0.4 | Docker Compose 一键启动、截图、演示视频 | 🚧 实现中 |
 | v1.0 | 商业版本开放咨询 | 📋 计划中 |
 
 ---
@@ -720,7 +746,38 @@ Docker / K8s 部署脚本
 
 ## 截图
 
-当前版本暂无前端页面截图。v0.3 已跑通对话历史与调用记录 API，后续补充演示截图或前端页面。
+截图目录：[docs/screenshots](docs/screenshots)
+
+当前已预留 v0.4 截图交付位，真实截图需要在完成 Docker Compose 端到端验证后生成。截图分为两类：
+
+### 技术可信截图
+
+用于证明 Docker Compose 一键启动、健康检查和接口文档可用。
+
+| 截图 | 文件 |
+|---|---|
+| Docker Compose 容器状态 | [docs/screenshots/technical/01-compose-ps-healthy.jpg](docs/screenshots/technical/01-compose-ps-healthy.jpg) |
+| Actuator 健康检查 | [docs/screenshots/technical/02-actuator-health-up.jpg](docs/screenshots/technical/02-actuator-health-up.jpg) |
+| 中文 Swagger API 文档 | [docs/screenshots/technical/03-swagger-cn-api.jpg](docs/screenshots/technical/03-swagger-cn-api.jpg) |
+
+### 商业演示截图
+
+用于向非技术用户展示“能创建知识库、上传文档、发起问答、查看记录”。
+
+| 截图 | 文件 |
+|---|---|
+| 登录 / 进入系统 | [docs/screenshots/business/01-login.jpg](docs/screenshots/business/01-login.jpg) |
+| 知识库列表 | [docs/screenshots/business/02-knowledge-base-list.jpg](docs/screenshots/business/02-knowledge-base-list.jpg) |
+| 创建知识库 | [docs/screenshots/business/03-create-knowledge-base.jpg](docs/screenshots/business/03-create-knowledge-base.jpg) |
+| 上传文档并处理完成 | [docs/screenshots/business/04-upload-document-ready.jpg](docs/screenshots/business/04-upload-document-ready.jpg) |
+| AI 问答与引用片段 | [docs/screenshots/business/05-ai-qa-with-references.jpg](docs/screenshots/business/05-ai-qa-with-references.jpg) |
+| 调用记录 / 成本追踪入口 | [docs/screenshots/business/06-invocation-logs.jpg](docs/screenshots/business/06-invocation-logs.jpg) |
+
+演示视频目录：[docs/demo](docs/demo)
+
+| 视频 | 文件 |
+|---|---|
+| v0.4 Docker Compose + 商业流程演示 | [docs/demo/videos/v0.4-docker-compose-commercial-demo.mp4](docs/demo/videos/v0.4-docker-compose-commercial-demo.mp4) |
 
 ---
 

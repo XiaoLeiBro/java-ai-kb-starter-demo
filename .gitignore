@@ -27,6 +27,8 @@ Thumbs.db
 # ---------- Logs ----------
 logs/
 *.log
+.playwright-cli/
+*.tsbuildinfo
 
 # ---------- Env / Secrets ----------
 .env

@@ -4,10 +4,10 @@
 
 | 组件 | 版本 | 说明 |
 |---|---|---|
-| JDK | 21+ | 推荐 Temurin 21 |
-| Maven | 3.9+ | 也可以使用项目内 `mvnw` |
-| Docker | 最新稳定版 | 拉起 PostgreSQL + Redis |
+| Docker | 最新稳定版 | 拉起 Vue 前端、Spring Boot 后端、PostgreSQL、Redis |
 | Docker Compose | v2+ | 推荐使用 Docker Desktop 自带版本 |
+
+> Docker Compose 启动路径不要求本机安装 JDK 或 Maven；应用镜像会在 Docker 构建阶段完成 Maven 编译。
 
 ---
 
@@ -48,13 +48,37 @@ embedding-model: BAAI/bge-m3
 
 ---
 
-## 3. 启动本地依赖
+## 3. 配置 Docker Compose 环境
 
 在项目根目录执行：
 
 ```bash
+cp .env.example .env
+```
+
+编辑 `.env`，至少替换以下 6 个模型配置：
+
+```text
+AI_KB_LLM_API_KEY=your-chat-api-key-here
+AI_KB_LLM_BASE_URL=https://api.deepseek.com
+AI_KB_CHAT_MODEL=deepseek-v4-flash
+
+AI_KB_EMBEDDING_API_KEY=your-embedding-api-key-here
+AI_KB_EMBEDDING_BASE_URL=https://api.siliconflow.cn/v1
+AI_KB_EMBEDDING_MODEL=BAAI/bge-m3
+```
+
+如果只想验证应用启动，可以暂时保留占位值；真实 AI 问答需要有效 API Key。
+
+---
+
+## 4. 一键启动全部服务
+
+```bash
 docker compose up -d
 ```
+
+首次启动会自动构建 `ai-kb-demo:latest` 后端镜像和 `ai-kb-demo-web:latest` 前端镜像，并拉起 Vue 前端、Spring Boot 后端、PostgreSQL 和 Redis。
 
 查看容器状态：
 
@@ -65,9 +89,14 @@ docker compose ps
 默认会启动：
 
 ```text
+Vue 前端：http://localhost:18081
+Spring Boot 后端：http://localhost:18080
+Swagger UI：http://localhost:18080/swagger-ui.html
 PostgreSQL：localhost:15432
 Redis：localhost:16379
 ```
+
+> `18080` 是后端应用端口，Swagger 只是后端应用中的接口文档页面；前端页面使用 `18081`。
 
 Demo 默认数据库账号仅用于本地体验：
 
@@ -81,67 +110,19 @@ password: ai_kb_demo_2026
 
 ---
 
-## 4. 配置应用
+## 5. 本地开发启动（可选）
 
-复制开发环境配置文件：
-
-```bash
-cp src/main/resources/application-dev.yml.example \
-   src/main/resources/application-dev.yml
-```
-
-编辑 `application-dev.yml`，至少修改 JWT Secret。要跑通上传、向量化、RAG 问答、对话历史和调用记录主链路，需要填入真实模型配置：
-
-```yaml
-langchain4j:
-  open-ai:
-    chat-model:
-      api-key: sk-your-real-key-here
-      base-url: https://api.siliconflow.cn/v1
-      model-name: Qwen/Qwen2.5-7B-Instruct
-    embedding-model:
-      api-key: sk-your-real-key-here
-      base-url: https://api.siliconflow.cn/v1
-      model-name: BAAI/bge-m3
-
-ai-kb:
-  chat:
-    max-list-results: 100
-  security:
-    jwt:
-      secret: your-jwt-secret-at-least-32-bytes
-```
-
-建议用环境变量传入 API Key，避免真实密钥写入本地配置文件：
+如果你不想使用应用容器，也可以只启动 PostgreSQL/Redis 后在 IDE 中运行应用。
 
 ```bash
-export AI_KB_LLM_API_KEY="你的 API Key"
-export AI_KB_EMBEDDING_API_KEY="你的 API Key"
-export AI_KB_CHAT_MAX_LIST_RESULTS="100"
-```
-
-> `application-dev.yml` 应加入 `.gitignore`，不要提交真实 API Key。
-
----
-
-## 5. 启动应用
-
-使用 Maven Wrapper：
-
-```bash
+docker compose up -d postgres redis
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-或者在 IDE 中直接运行：
+本地开发配置模板仍保留在：
 
 ```text
-AiKbApplication
-```
-
-如需启用开发 profile，设置：
-
-```text
-spring.profiles.active=dev
+src/main/resources/application-dev.yml.example
 ```
 
 ---
@@ -151,7 +132,8 @@ spring.profiles.active=dev
 执行：
 
 ```bash
-curl http://localhost:8080/api/v1/health
+curl http://localhost:18080/api/v1/health
+curl http://localhost:18081/api/v1/health
 ```
 
 预期返回类似：
@@ -171,7 +153,7 @@ curl http://localhost:8080/api/v1/health
 ### 注册用户
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/auth/register \
+curl -X POST http://localhost:18080/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "username": "demo_user",
@@ -183,7 +165,7 @@ curl -X POST http://localhost:8080/api/v1/auth/register \
 ### 登录获取 Token
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/auth/login \
+curl -X POST http://localhost:18080/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "username": "demo_user",
@@ -194,7 +176,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 ### 查询当前用户
 
 ```bash
-curl http://localhost:8080/api/v1/auth/me \
+curl http://localhost:18080/api/v1/auth/me \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 

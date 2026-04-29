@@ -11,6 +11,9 @@ import com.brolei.aikb.interfaces.dto.ApiResult;
 import com.brolei.aikb.interfaces.dto.chat.ConversationResponse;
 import com.brolei.aikb.interfaces.dto.chat.CreateConversationRequest;
 import com.brolei.aikb.interfaces.dto.chat.MessageResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -26,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /** 对话会话相关接口的 REST 控制器. */
+@Tag(name = "对话会话", description = "创建、查询、归档对话会话，并查看会话消息历史")
 @RestController
 @RequestMapping("/api/v1/conversations")
 public class ConversationController {
@@ -41,6 +45,7 @@ public class ConversationController {
   }
 
   /** 创建对话会话. */
+  @Operation(summary = "创建对话会话", description = "在指定知识库下创建一个连续问答会话。")
   @PostMapping
   public ResponseEntity<ApiResult<ConversationResponse>> createConversation(
       Authentication authentication, @Valid @RequestBody CreateConversationRequest request) {
@@ -54,9 +59,13 @@ public class ConversationController {
   }
 
   /** 查询我的对话会话列表. */
+  @Operation(summary = "查询会话列表", description = "查询当前用户的会话列表，可按知识库 ID 过滤。")
   @GetMapping
   public ResponseEntity<ApiResult<List<ConversationResponse>>> listConversations(
-      Authentication authentication, @RequestParam(required = false) String knowledgeBaseId) {
+      Authentication authentication,
+      @Parameter(description = "知识库 ID，不传则查询全部会话", example = "4c9f0d1a-0a3a-4c48-bb6a-7c8b69e1b001")
+          @RequestParam(required = false)
+          String knowledgeBaseId) {
     UserId userId = (UserId) authentication.getPrincipal();
     KnowledgeBaseId kbId = knowledgeBaseId != null ? KnowledgeBaseId.of(knowledgeBaseId) : null;
     List<Conversation> conversations =
@@ -73,9 +82,13 @@ public class ConversationController {
   }
 
   /** 查询单个会话详情. */
+  @Operation(summary = "查询会话详情", description = "根据会话 ID 查询会话标题、状态和所属知识库。")
   @GetMapping("/{id}")
   public ResponseEntity<ApiResult<ConversationResponse>> getConversation(
-      Authentication authentication, @PathVariable String id) {
+      Authentication authentication,
+      @Parameter(description = "会话 ID", example = "8f6d7b2b-0a54-40da-a6d6-5af81e04d102")
+          @PathVariable
+          String id) {
     UserId userId = (UserId) authentication.getPrincipal();
     ConversationId conversationId = ConversationId.of(id);
     Conversation conversation =
@@ -84,9 +97,13 @@ public class ConversationController {
   }
 
   /** 查询会话消息列表. */
+  @Operation(summary = "查询会话消息", description = "查看某个会话下的用户问题和 AI 回答历史。")
   @GetMapping("/{id}/messages")
   public ResponseEntity<ApiResult<List<MessageResponse>>> getMessages(
-      Authentication authentication, @PathVariable String id) {
+      Authentication authentication,
+      @Parameter(description = "会话 ID", example = "8f6d7b2b-0a54-40da-a6d6-5af81e04d102")
+          @PathVariable
+          String id) {
     UserId userId = (UserId) authentication.getPrincipal();
     ConversationId conversationId = ConversationId.of(id);
     List<Message> messages = conversationApplicationService.getMessages(conversationId, userId);
@@ -102,9 +119,13 @@ public class ConversationController {
   }
 
   /** 归档对话会话. */
+  @Operation(summary = "归档会话", description = "将指定会话标记为归档，不再作为活跃会话展示。")
   @DeleteMapping("/{id}")
   public ResponseEntity<ApiResult<Void>> archiveConversation(
-      Authentication authentication, @PathVariable String id) {
+      Authentication authentication,
+      @Parameter(description = "会话 ID", example = "8f6d7b2b-0a54-40da-a6d6-5af81e04d102")
+          @PathVariable
+          String id) {
     UserId userId = (UserId) authentication.getPrincipal();
     ConversationId conversationId = ConversationId.of(id);
     conversationApplicationService.archiveConversation(conversationId, userId);
