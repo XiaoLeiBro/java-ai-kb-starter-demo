@@ -1,10 +1,12 @@
 package com.brolei.aikb.interfaces.rest;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -14,6 +16,7 @@ import com.brolei.aikb.domain.llm.LlmChatResult;
 import com.brolei.aikb.domain.llm.LlmProvider;
 import com.brolei.aikb.interfaces.dto.auth.LoginRequest;
 import com.brolei.aikb.interfaces.dto.auth.RegisterRequest;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,6 +26,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -286,6 +290,35 @@ class AuthControllerIntegrationTest {
   }
 
   @Test
+  void downloadDocumentShouldReturnOriginalFileForOwner() throws Exception {
+    String token = registerAndLogin("download_user");
+    String kbId = createKnowledgeBase(token);
+    byte[] content = "报销规则：发票抬头必须正确。".getBytes();
+    MockMultipartFile file = new MockMultipartFile("file", "expense.txt", "text/plain", content);
+
+    String response =
+        mockMvc
+            .perform(
+                multipart("/api/v1/knowledge-bases/{id}/documents", kbId)
+                    .file(file)
+                    .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    JsonNode root = objectMapper.readTree(response);
+    String documentId = root.path("data").path("id").asText();
+
+    mockMvc
+        .perform(
+            get("/api/v1/knowledge-bases/{id}/documents/{documentId}/download", kbId, documentId)
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, containsString("attachment")))
+        .andExpect(content().bytes(content));
+  }
+
+  @Test
   void chatShouldSearchOnlyInsideRequestedKnowledgeBase() throws Exception {
     String token = registerAndLogin("isolation_user");
     String firstKbId = createKnowledgeBase(token);
@@ -328,7 +361,11 @@ class AuthControllerIntegrationTest {
     String token = registerAndLogin("bad_file_user");
     String kbId = createKnowledgeBase(token);
     MockMultipartFile file =
-        new MockMultipartFile("file", "policy.pdf", "application/pdf", "bad".getBytes());
+        new MockMultipartFile(
+            "file",
+            "policy.docx",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "bad".getBytes());
 
     mockMvc
         .perform(
@@ -336,7 +373,7 @@ class AuthControllerIntegrationTest {
                 .file(file)
                 .header("Authorization", "Bearer " + token))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.message").value("UNSUPPORTED_FILE_TYPE: 不支持的文件类型: pdf"));
+        .andExpect(jsonPath("$.message").value("UNSUPPORTED_FILE_TYPE: 不支持的文件类型: docx"));
   }
 
   @Test

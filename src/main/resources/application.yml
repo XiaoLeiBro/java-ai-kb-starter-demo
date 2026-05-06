@@ -48,10 +48,11 @@ langchain4j:
       # 默认占位，请在 application-dev.yml 中覆盖为真实值
       api-key: ${AI_KB_LLM_API_KEY:please-override-me}
       base-url: ${AI_KB_LLM_BASE_URL:https://api.deepseek.com}
-      model-name: ${AI_KB_CHAT_MODEL:deepseek-v4-flash}
+      model-name: ${AI_KB_CHAT_MODEL:Qwen/Qwen2.5-7B-Instruct}
       temperature: 0.3
       timeout: PT60S
-      log-requests: true
+      # 避免上传资料和完整 Prompt 被写入容器日志
+      log-requests: false
       log-responses: false
     embedding-model:
       api-key: ${AI_KB_EMBEDDING_API_KEY:please-override-me}
@@ -86,6 +87,7 @@ ai-kb:
     allowed-ext:
       - md
       - txt
+      - pdf
   text-splitter:
     chunk-size: 800
     overlap: 120

@@ -64,6 +64,7 @@ class KnowledgeApplicationServiceTest {
             embeddingProvider,
             vectorStore,
             new FileValidator(),
+            (filename, content) -> new String(content, StandardCharsets.UTF_8),
             new AiKbProperties());
     ownerId = UserId.generate();
     knowledgeBase = KnowledgeBase.create(ownerId, "kb", null);

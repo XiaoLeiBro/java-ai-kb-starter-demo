@@ -5,6 +5,7 @@ import {
   CircleCheck,
   Collection,
   DataAnalysis,
+  Download,
   DocumentAdd,
   Finished,
   Key,
@@ -82,6 +83,12 @@ const readyDocumentCount = computed(
 
 const latestLogs = computed(() => logs.value.slice(0, 8))
 
+const averageDurationSeconds = computed(() => {
+  if (!logs.value.length) return '0.00'
+  const averageMs = logs.value.reduce((sum, item) => sum + item.durationMs, 0) / logs.value.length
+  return formatDurationSeconds(averageMs)
+})
+
 function shortId(value?: string) {
   if (!value) return '-'
   return value.length > 8 ? `${value.slice(0, 8)}...` : value
@@ -90,6 +97,20 @@ function shortId(value?: string) {
 function formatTime(value?: string) {
   if (!value) return '-'
   return new Date(value).toLocaleString('zh-CN', { hour12: false })
+}
+
+function formatDate(value?: string) {
+  if (!value) return '-'
+  return new Date(value).toISOString().slice(0, 10)
+}
+
+function formatDurationSeconds(durationMs?: number) {
+  return ((durationMs || 0) / 1000).toFixed(2)
+}
+
+function knowledgeBaseName(knowledgeBaseId?: string) {
+  if (!knowledgeBaseId) return '-'
+  return knowledgeBases.value.find((item) => item.id === knowledgeBaseId)?.name || shortId(knowledgeBaseId)
 }
 
 function statusType(status?: string) {
@@ -268,6 +289,28 @@ async function uploadDocument(options: UploadRequestOptions) {
   }
 }
 
+async function downloadDocument(documentId: string, filename: string) {
+  if (!selectedKnowledgeBaseId.value) {
+    ElMessage.warning('请先选择知识库')
+    return
+  }
+  try {
+    const blob = await api.downloadDocument(selectedKnowledgeBaseId.value, documentId)
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename || '知识库文档'
+    link.style.display = 'none'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    ElMessage.success('已开始下载原文件')
+  } catch (error) {
+    ElMessage.error((error as Error).message)
+  }
+}
+
 async function ensureConversation() {
   if (!chatForm.useConversation || !selectedKnowledgeBaseId.value) return undefined
   const selectedConversation = conversations.value.find((item) => item.id === selectedConversationId.value)
@@ -402,7 +445,7 @@ onMounted(() => {
           <div class="brand-mark compact">KB</div>
           <div>
             <h1>AI 知识库商业 Demo</h1>
-            <span>前端 18081 / 后端 18080</span>
+            <span>Docker 本地环境</span>
           </div>
         </div>
         <div class="topbar-actions">
@@ -516,7 +559,7 @@ onMounted(() => {
                 <el-upload
                   :show-file-list="false"
                   :http-request="uploadDocument"
-                  accept=".md,.txt,.pdf,.doc,.docx"
+                  accept=".md,.txt,.pdf"
                 >
                   <el-button type="primary" :icon="UploadFilled" :disabled="!selectedKnowledgeBaseId">
                     上传文档
@@ -572,8 +615,15 @@ onMounted(() => {
                     <p>{{ item.content }}</p>
                     <div v-if="item.references?.length" class="reference-list">
                       <div v-for="ref in item.references" :key="`${ref.documentId}-${ref.chunkIndex}`">
-                        <span>{{ ref.fileName }} #{{ ref.chunkIndex }}</span>
-                        <small>相似度 {{ Number(ref.score).toFixed(3) }}</small>
+                        <span>{{ ref.fileName }}</span>
+                        <el-button
+                          size="small"
+                          text
+                          :icon="Download"
+                          @click="downloadDocument(ref.documentId, ref.fileName)"
+                        >
+                          下载原文件
+                        </el-button>
                       </div>
                     </div>
                   </div>
@@ -587,6 +637,8 @@ onMounted(() => {
                   :rows="3"
                   resize="none"
                   placeholder="输入问题"
+                  @keydown.enter.exact.prevent="askQuestion"
+                  @keydown.shift.enter.stop
                 />
                 <div class="ask-actions">
                   <el-checkbox v-model="chatForm.useConversation">写入会话</el-checkbox>
@@ -627,7 +679,16 @@ onMounted(() => {
                 <h3>引用来源</h3>
                 <el-empty v-if="!chatResult?.references?.length" description="暂无引用" />
                 <div v-for="ref in chatResult?.references || []" :key="`${ref.documentId}-${ref.chunkIndex}`">
-                  <strong>{{ ref.fileName }} #{{ ref.chunkIndex }}</strong>
+                  <div class="reference-title">
+                    <strong>{{ ref.fileName }}</strong>
+                    <el-button
+                      size="small"
+                      :icon="Download"
+                      @click="downloadDocument(ref.documentId, ref.fileName)"
+                    >
+                      下载原文件
+                    </el-button>
+                  </div>
                   <p>{{ ref.content }}</p>
                 </div>
               </div>
@@ -667,13 +728,13 @@ onMounted(() => {
                   <template #default="{ row }">{{ row.totalTokens }}</template>
                 </el-table-column>
                 <el-table-column label="耗时" width="120">
-                  <template #default="{ row }">{{ row.durationMs }} ms</template>
+                  <template #default="{ row }">{{ formatDurationSeconds(row.durationMs) }} 秒</template>
                 </el-table-column>
-                <el-table-column label="知识库" width="130">
-                  <template #default="{ row }">{{ shortId(row.knowledgeBaseId) }}</template>
+                <el-table-column label="知识库" min-width="160">
+                  <template #default="{ row }">{{ knowledgeBaseName(row.knowledgeBaseId) }}</template>
                 </el-table-column>
-                <el-table-column label="时间" min-width="180">
-                  <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
+                <el-table-column label="时间" width="140">
+                  <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
                 </el-table-column>
               </el-table>
             </section>
@@ -692,13 +753,7 @@ onMounted(() => {
               <div>
                 <el-icon><CircleCheck /></el-icon>
                 <span>平均耗时</span>
-                <strong>
-                  {{
-                    logs.length
-                      ? Math.round(logs.reduce((sum, item) => sum + item.durationMs, 0) / logs.length)
-                      : 0
-                  }} ms
-                </strong>
+                <strong>{{ averageDurationSeconds }} 秒</strong>
               </div>
             </section>
           </div>

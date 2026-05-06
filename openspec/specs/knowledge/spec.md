@@ -2,17 +2,17 @@
 
 ## Purpose
 
-覆盖 v0.2 免费 Demo 的最小知识库 RAG 主流程：
+覆盖免费 Demo 的最小知识库 RAG 主流程：
 
 ```text
-创建知识库 → 上传 Markdown/TXT → 文本切分 → Embedding → pgvector 入库 → 检索 → LLM 问答
+创建知识库 → 上传 Markdown/TXT/文本型 PDF → 文本切分 → Embedding → pgvector 入库 → 检索 → LLM 问答
 ```
 
 ## Requirements
 
 ### Requirement: 创建知识库
 
-系统应允许已认证用户创建带有名称和可选描述的知识库。
+系统 SHALL 允许已认证用户创建带有名称和可选描述的知识库。
 
 #### Scenario: 使用有效名称创建知识库
 
@@ -34,7 +34,7 @@
 
 ### Requirement: 列出我的知识库
 
-系统应仅返回当前已认证用户创建的知识库。
+系统 SHALL 仅返回当前已认证用户创建的知识库。
 
 #### Scenario: 有效认证下列出知识库
 
@@ -50,12 +50,12 @@
 
 ### Requirement: 上传文档
 
-系统应允许用户向自己拥有的知识库上传 `.md` 或 `.txt` 文件，经过文本切分、Embedding 和 pgvector 存储处理。
+系统 SHALL 允许用户向自己拥有的知识库上传 `.md`、`.txt` 或文本型 `.pdf` 文件，经过文本提取、文本切分、Embedding 和 pgvector 存储处理。
 
 #### Scenario: 向拥有的知识库上传有效文档
 
 - **Given** 用户已登录，且拥有指定的知识库
-- **When** 用户请求 `POST /api/v1/knowledge-bases/{knowledgeBaseId}/documents`，上传 `.md` 或 `.txt` 文件
+- **When** 用户请求 `POST /api/v1/knowledge-bases/{knowledgeBaseId}/documents`，上传 `.md`、`.txt` 或文本型 `.pdf` 文件
 - **Then** 系统保存文件、读取文本、切分、Embedding、写入 pgvector、更新文档状态，返回 HTTP 200 和文档 ID、文件名、状态、切片数
 
 #### Scenario: 未认证上传文档
@@ -84,7 +84,7 @@
 
 ### Requirement: 列出文档
 
-系统应允许用户列出自己拥有的知识库中的文档。
+系统 SHALL 允许用户列出自己拥有的知识库中的文档。
 
 #### Scenario: 在拥有的知识库中列出文档
 
@@ -106,7 +106,7 @@
 
 ### Requirement: 知识库问答
 
-系统应通过 RAG 检索 + LLM 生成来回答基于知识库内容的问题。
+系统 SHALL 通过 RAG 检索 + LLM 生成来回答基于知识库内容的问题。
 
 #### Scenario: 使用有效知识库问答
 
@@ -140,6 +140,8 @@
 
 ### Requirement: 领域规则
 
+系统 MUST 保持知识库领域规则、文档索引规则和问答约束一致。
+
 - `KnowledgeBase` 是当前用户拥有的知识库，跨用户访问统一返回 404。
 - `KnowledgeDocument` 是上传文件对应的文档记录，上传索引成功后状态为 `READY`。
 - 文档本地存储路径必须使用同一个持久化 `documentId`，路径格式为 `userId/knowledgeBaseId/documentId/originalFilename`。
@@ -151,7 +153,15 @@
 - Prompt 必须限定模型只能基于知识库片段回答。
 - LLM 调用不放在数据库事务中。
 
+#### Scenario: 无匹配片段时不调用 LLM
+
+- **Given** 用户已登录，且拥有指定知识库
+- **When** 用户提问但向量检索没有返回匹配片段
+- **Then** 系统必须直接返回"当前知识库中没有找到相关信息"，且不得调用 LLM
+
 ### Requirement: 持久层规则
+
+系统 MUST 使用 PostgreSQL + pgvector 持久化知识库、文档、切片和向量数据。
 
 - 知识库、文档、切片和向量数据使用 PostgreSQL + pgvector。
 - Flyway 负责创建 `knowledge_bases`、`knowledge_documents`、`document_chunks`、`kb_embeddings`。
@@ -159,17 +169,33 @@
 - PO 使用 `IdType.INPUT`，聚合根 ID 由领域层或应用层显式传入，持久层不得重新生成 ID。
 - application 和 domain 层不得依赖 MyBatis-Plus、LangChain4j 或 pgvector 类型。
 
+#### Scenario: 向量检索按知识库隔离
+
+- **Given** 两个知识库都存在已索引的向量片段
+- **When** 用户针对其中一个知识库进行问答检索
+- **Then** pgvector 检索必须按 `knowledgeBaseId` 过滤，不得返回其他知识库的片段
+
 ### Requirement: 安全规则
+
+系统 MUST 保护知识库、文档和问答接口，避免跨用户访问和敏感错误泄露。
 
 - `/api/v1/health`、`POST /api/v1/auth/register`、`POST /api/v1/auth/login`、Swagger 文档路径允许匿名访问。
 - 知识库、文档和问答接口必须认证。
 - 访问其他用户知识库、文档或向量片段时统一返回 404。
 - 对外错误不得泄露 SQL、API Key、模型供应商原始敏感信息或框架堆栈。
 
+#### Scenario: 跨用户访问知识库资源
+
+- **Given** 用户 A 拥有一个知识库
+- **When** 用户 B 请求访问该知识库、其文档或其向量片段
+- **Then** 系统必须返回 HTTP 404，不暴露资源是否存在
+
 ### Requirement: 非目标
 
+系统 MUST 保持免费 Demo 的知识库能力边界，不应把以下能力描述为当前已实现能力。
+
 - 不做多租户、组织架构或 RBAC。
-- 不做 PDF、Word、Excel、PPT 等多格式解析。
+- 不做扫描件 PDF OCR、Word、Excel、PPT 等多格式解析。
 - 不做异步任务、进度条或失败重试。
 - 不做文档删除后的向量清理。
 - 不做重复文档检测或增量向量化。
@@ -178,3 +204,9 @@
 - 不做管理后台完整页面。
 - 不做多模型供应商管理。
 - 不做 Agent、工具调用或工作流编排。
+
+#### Scenario: 非目标知识库能力不作为当前能力暴露
+
+- **Given** 读者查看当前知识库 RAG 规格
+- **When** 查看功能边界
+- **Then** 多租户、扫描件 PDF OCR、Word、Excel、PPT、异步任务、文档删除清理、完整审计、管理后台、多模型管理和 Agent 必须被标记为非目标或商业版计划

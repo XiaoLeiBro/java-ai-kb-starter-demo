@@ -122,6 +122,25 @@ class ChatApplicationServiceTest {
   }
 
   @Test
+  void chatShouldNormalizeMarkdownAnswerToPlainText() {
+    vectorStore.searchResults =
+        List.of(
+            new RetrievedChunk(
+                knowledgeBase.id(),
+                KnowledgeDocumentId.generate(),
+                DocumentChunkId.generate(),
+                "doc.md",
+                0,
+                "年假 5 天",
+                0.9));
+    llmProvider.answer = "### 答案\n**年假**是 `5 天`。 [片段1]";
+
+    ChatResult result = service.chat(ownerId, knowledgeBase.id(), "年假几天？", 3);
+
+    assertEquals("答案\n年假是 5 天。 [片段1]", result.chatAnswer().answer());
+  }
+
+  @Test
   void chatShouldReturnNotFoundWhenKnowledgeBaseBelongsToAnotherUser() {
     BusinessException ex =
         assertThrows(

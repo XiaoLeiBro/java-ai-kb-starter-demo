@@ -342,6 +342,7 @@ p {
 
 .reference-list div {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding-top: 6px;
@@ -382,6 +383,13 @@ p {
   border: 1px solid #d9e1ee;
   border-radius: 8px;
   background: #fbfdff;
+}
+
+.reference-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .filter-row {

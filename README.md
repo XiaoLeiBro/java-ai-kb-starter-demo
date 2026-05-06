@@ -1,10 +1,10 @@
-# Java AI Knowledge Base Starter（Demo）
+# Java 企业 AI 助手工程模板（Demo）
 
-> **Java 企业级 AI 知识库系统 · 免费演示版**
+> **面向私有化部署、RAG 知识库、AI 客服和 Java 老系统二开的可交付 Demo**
 >
 > 基于 **Spring Boot 4 + PostgreSQL / pgvector + MyBatis-Plus**，按 DDD 思路进行工程分层。
 >
-> 面向 Java 程序员、外包团队、中小企业 IT 和技术主管，用于学习、体验和验证一个可落地的企业级 AI 知识库系统应该如何设计。
+> 面向 Java 程序员、外包团队、中小企业 IT 和技术主管，用于学习、体验和验证一个可落地、可二开、可私有化部署的企业 AI 助手应该如何设计。
 
 ---
 
@@ -22,9 +22,11 @@
 - [API 快速体验](#api-快速体验)
 - [项目目录结构](#项目目录结构)
 - [OpenSpec 工作流](#openspec-工作流)
+- [发布前检查清单](docs/release-checklist.md)
 - [路线图](#路线图)
 - [免费版与商业版边界](#免费版与商业版边界)
 - [商业版本](#商业版本)
+- [客户介绍与演示材料](#客户介绍与演示材料)
 - [截图](#截图)
 - [常见问题](#常见问题)
 - [安全说明](#安全说明)
@@ -38,9 +40,9 @@
 
 这**不是一篇教程**，也**不是一个只会调用大模型 API 的玩具 Demo**。
 
-这是一个面向 **Java AI 应用工程化** 的项目模板。它要回答的问题是：
+这是一个面向 **Java AI 应用工程化和私有化交付** 的项目模板。它要回答的问题是：
 
-> Java 程序员做 AI 应用，除了“调通大模型接口”之外，在工程化、企业级能力和可交付性上，还差哪些东西？
+> Java 程序员做企业 AI 助手，除了“调通大模型接口”之外，在工程化、私有化部署、业务系统二开和可交付性上，还差哪些东西？
 
 当前公开 Demo 已完成用户注册、登录、JWT 鉴权、DDD 工程骨架和最小 RAG 主流程：
 
@@ -48,12 +50,13 @@
 创建知识库 → 上传文档 → 文本切分 → 向量化 → 向量检索 → 组装 Prompt → AI 问答
 ```
 
-它的目标不是直接替代商业系统，而是帮助你理解：
+它的目标不是再造一个通用知识库 SaaS，也不是直接替代 Dify / FastGPT / MaxKB 这类成熟平台，而是帮助你理解：
 
 - Java 后端如何设计 RAG 知识库系统
 - AI 应用如何与传统业务系统结合
 - 大模型调用如何做成可维护的工程结构
 - 免费 Demo 和商业交付系统之间差在哪里
+- Java 老系统如何接入知识库问答、AI 客服和内部助手能力
 
 ---
 
@@ -100,12 +103,14 @@
 ✅ OpenSpec 规格驱动工作流
 ✅ 知识库、对话、LLM、计费的领域包边界
 ✅ 创建和查询当前用户知识库
-✅ 上传 Markdown / TXT 文件
+✅ 上传 Markdown / TXT / 文本型 PDF 文件
 ✅ 本地文件存储
 ✅ 固定字符数文本切分
 ✅ 单模型 Embedding 接入（OpenAI Compatible）
 ✅ PostgreSQL + pgvector 向量存储与检索
 ✅ 单轮 AI 问答，返回答案和引用片段
+✅ 引用片段对应原文件下载
+✅ 基础前端控制台，支持 Enter 提问、Shift + Enter 换行
 ✅ 知识库归属校验，跨用户访问统一返回 404
 ✅ 对话会话创建、查询、归档（软删除）
 ✅ 按会话查看历史消息列表（append-only）
@@ -127,11 +132,11 @@
 ❌ 多模型供应商适配：SiliconFlow / DeepSeek / Qwen / Ollama
 ❌ 限流、熔断、失败重试
 ❌ 完整调用日志与审计
-❌ PDF / Word / Excel / PPT 多格式解析
+❌ 扫描件 PDF OCR / Word / Excel / PPT 多格式解析
 ❌ 文档重复上传处理
 ❌ 增量向量化与切片重试
 ❌ 管理后台完整版
-❌ 私有化部署文档
+❌ 生产级私有化部署文档与运维方案
 ❌ 二开指南与交付模板
 ❌ 商业授权
 ```
@@ -213,7 +218,7 @@ domain.billing     Token 与成本上下文
 | 数据迁移 | Flyway | 数据库版本管理 |
 | 缓存 | Redis 7 | Docker Compose 内置，应用健康检查可验证连接 |
 | 鉴权 | Spring Security + JWT | 无状态接口鉴权 |
-| 文档解析 | Apache Tika / PDFBox / POI | 商业版增强 |
+| 文档解析 | PDFBox | 当前支持文本型 PDF；Tika / POI / OCR 属于商业版增强 |
 | 部署 | Docker Compose | 本地一键启动 |
 | 工作流 | OpenSpec | 规格驱动开发与变更管理 |
 
@@ -274,7 +279,7 @@ OpenAI Compatible API Provider
 ### 2. 克隆项目
 
 ```bash
-git clone https://github.com/yourname/java-ai-kb-starter-demo.git
+git clone https://github.com/XiaoLeiBro/java-ai-kb-starter-demo.git
 cd java-ai-kb-starter-demo
 ```
 
@@ -290,15 +295,15 @@ cp .env.example .env
 
 ```text
 AI_KB_LLM_API_KEY=your-chat-api-key-here
-AI_KB_LLM_BASE_URL=https://api.deepseek.com
-AI_KB_CHAT_MODEL=deepseek-v4-flash
+AI_KB_LLM_BASE_URL=https://api.siliconflow.cn/v1
+AI_KB_CHAT_MODEL=Qwen/Qwen2.5-7B-Instruct
 
 AI_KB_EMBEDDING_API_KEY=your-embedding-api-key-here
 AI_KB_EMBEDDING_BASE_URL=https://api.siliconflow.cn/v1
 AI_KB_EMBEDDING_MODEL=BAAI/bge-m3
 ```
 
-如果只想先看接口和启动效果，可以暂时保留占位值；应用会启动，但真实 AI 问答会因为 API Key 无效而失败。
+如果只想先看接口和启动效果，可以暂时保留占位值；应用会启动，但上传后的向量化和真实 AI 问答会因为 API Key 无效而失败。不同服务商的模型名称和向量维度可能变化，请以服务商当前文档为准。
 
 ---
 
@@ -440,7 +445,7 @@ curl -X POST http://localhost:18080/api/v1/knowledge-bases \
   -H "Content-Type: application/json" \
   -d '{
     "name": "公司制度知识库",
-    "description": "用于测试 Markdown / TXT 文档问答"
+    "description": "用于测试 Markdown / TXT / 文本型 PDF 文档问答"
   }'
 ```
 
@@ -448,12 +453,16 @@ curl -X POST http://localhost:18080/api/v1/knowledge-bases \
 
 ---
 
-### 6. 上传 Markdown / TXT 文档
+### 6. 上传 Markdown / TXT / 文本型 PDF 文档
 
 项目内置示例文档：
 
 ```text
 examples/company-policy-demo.md
+docs/sample-documents/公司年假制度.md
+docs/sample-documents/客服售后规则.md
+docs/sample-documents/产品介绍.md
+docs/sample-documents/新员工入职指南.md
 ```
 
 上传：
@@ -670,7 +679,8 @@ openspec/specs/
 | v0.1 | 用户注册 / 登录 / JWT 鉴权 | ✅ 已完成 |
 | v0.2 | 跑通上传 → 切分 → 向量化 → 检索 → 问答主流程 | ✅ 已完成 |
 | v0.3 | 对话历史、基础调用记录 | ✅ 已完成 |
-| v0.4 | Docker Compose 一键启动、截图、演示视频 | ✅ 已完成  |
+| v0.4 | Docker Compose 一键启动、文本型 PDF、原文件下载、前端体验优化 | ✅ 已完成 |
+| v0.5 | 截图、演示视频、客户试点反馈闭环 | 🚧 实现中 |
 | v1.0 | 商业版本开放咨询 | 🚧 实现中 |
 
 ---
@@ -683,7 +693,7 @@ openspec/specs/
 | DDD 分层结构 | ✅ | ✅ |
 | 用户登录 | ✅ 简化版 | ✅ 完整版 |
 | 知识库管理 | ✅ 当前用户知识库 | ✅ 多知识库 / 多租户 |
-| 文件上传 | ✅ TXT / Markdown | ✅ PDF / Word / Excel / PPT |
+| 文件上传 | ✅ TXT / Markdown / 文本型 PDF | ✅ PDF OCR / Word / Excel / PPT |
 | 文本切分 | ✅ 简单切分 | ✅ 可配置切分策略 |
 | Embedding | ✅ 单模型 | ✅ 多模型 |
 | 向量库 | ✅ pgvector | ✅ pgvector / Milvus / ES |
@@ -694,14 +704,14 @@ openspec/specs/
 | 限流 / 熔断 / 重试 | ❌ | ✅ |
 | 管理后台 | ❌ | ✅ |
 | 二开文档 | ❌ | ✅ |
-| 私有化部署文档 | ❌ | ✅ |
+| 生产级私有化部署文档 | ❌ | ✅ |
 | 商业授权 | ❌ | ✅ |
 
 ---
 
 ## 商业版本
 
-商业版本不是简化 Demo，而是一套面向**真实项目交付**的 Java AI 知识库系统。
+商业版本不是简化 Demo，而是一套面向**真实项目交付**的 Java 企业 AI 助手工程模板。
 
 相比免费 Demo，商业版本重点补齐：
 
@@ -718,7 +728,7 @@ Token 统计与成本报表
 调用日志与审计
 限流、熔断、失败重试
 管理后台完整版
-PDF / Word / Excel / PPT 多格式文档解析
+PDF OCR / Word / Excel / PPT 多格式文档解析
 二开指南
 接口文档
 视频讲解
@@ -732,7 +742,7 @@ Docker / K8s 部署脚本
 
 | 版本 | 适合人群 | 内容说明 |
 |---|---|---|
-| 免费 Demo | 学习、体验、验证方向 | 本仓库提供，当前 v0.3 已跑通用户鉴权、RAG 主流程、对话历史与调用记录 |
+| 免费 Demo | 学习、体验、验证方向 | 本仓库提供，当前 v0.4 已跑通用户鉴权、RAG 主流程、文本型 PDF、原文件下载、对话历史与调用记录 |
 | 进阶版 | 想学习完整项目、自己二开 | 完整源码、启动文档、基础二开说明 |
 | 专业版 | 接单、公司内部项目、小团队落地 | 多模型适配、Token 统计、调用日志、管理后台、视频讲解 |
 | 陪跑版 | 需要部署指导、架构答疑、二开规划 | 专业版内容 + 1v1 架构答疑 + 部署指导 |
@@ -741,6 +751,20 @@ Docker / K8s 部署脚本
 如需商业版、源码授权、陪跑服务或企业私有化交付，请通过下方联系方式咨询。
 
 为避免版本差异和服务范围误解，具体费用会根据授权范围、服务内容、交付方式和是否需要企业定制单独确认。
+
+## 客户介绍与演示材料
+
+如果你想从“技术 Demo”转向客户演示或项目制交付，建议先阅读以下材料：
+
+| 文档 | 用途 |
+|---|---|
+| [docs/customer-facing-intro.md](docs/customer-facing-intro.md) | 面向非技术客户的企业知识库 AI 助手介绍页 |
+| [docs/demo-script.md](docs/demo-script.md) | 3 分钟演示视频脚本，包含逐步讲解话术 |
+| [docs/commercial-roadmap.md](docs/commercial-roadmap.md) | 从可演示版到可交付版、企业增强版的商业 Roadmap |
+| [docs/release-checklist.md](docs/release-checklist.md) | 提交、发布、录制演示前的检查清单 |
+| [docs/sample-documents](docs/sample-documents) | 用于演示上传和问答的样本文档 |
+
+当前建议优先用样本文档完成一次端到端演示，再根据客户行业替换为真实资料试点。
 
 ---
 

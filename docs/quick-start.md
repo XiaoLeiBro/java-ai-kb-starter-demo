@@ -60,15 +60,15 @@ cp .env.example .env
 
 ```text
 AI_KB_LLM_API_KEY=your-chat-api-key-here
-AI_KB_LLM_BASE_URL=https://api.deepseek.com
-AI_KB_CHAT_MODEL=deepseek-v4-flash
+AI_KB_LLM_BASE_URL=https://api.siliconflow.cn/v1
+AI_KB_CHAT_MODEL=Qwen/Qwen2.5-7B-Instruct
 
 AI_KB_EMBEDDING_API_KEY=your-embedding-api-key-here
 AI_KB_EMBEDDING_BASE_URL=https://api.siliconflow.cn/v1
 AI_KB_EMBEDDING_MODEL=BAAI/bge-m3
 ```
 
-如果只想验证应用启动，可以暂时保留占位值；真实 AI 问答需要有效 API Key。
+如果只想验证应用启动，可以暂时保留占位值；上传后的向量化和真实 AI 问答需要有效 API Key。不同服务商的模型名称、base-url 和向量维度可能不同，请以服务商当前文档为准。
 
 ---
 
@@ -203,10 +203,24 @@ A：默认宿主机端口：
 ```text
 PostgreSQL: 15432
 Redis: 16379
-应用服务: 8080
+Spring Boot 后端: 18080
+Vue 前端: 18081
 ```
 
-如果冲突，修改 `docker-compose.yml` 或 `application-dev.yml` 中的端口配置。
+如果冲突，优先修改 `.env` 中的宿主机端口：
+
+```text
+APP_PORT=28080
+WEB_PORT=28081
+PG_PORT=25432
+REDIS_PORT=26379
+```
+
+然后重新执行：
+
+```bash
+docker compose up -d
+```
 
 ---
 

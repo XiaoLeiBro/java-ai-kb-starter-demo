@@ -9,7 +9,7 @@ A：不可以。免费版采用 Source Available License，禁止商业使用、
 ---
 
 **Q：支持国内哪些大模型？**  
-A：当前 `v0.3` 已通过 OpenAI Compatible 协议接入 Chat Model 和 Embedding Model，并支持基础对话历史与调用记录。  
+A：当前 `v0.4` 已通过 OpenAI Compatible 协议接入 Chat Model 和 Embedding Model，并支持文本型 PDF、原文件下载、基础对话历史与调用记录。
 免费版只读取配置中的一组 Chat / Embedding 模型，不提供多供应商管理后台。你可以按账号情况配置兼容 OpenAI 接口的模型服务，例如 SiliconFlow、DeepSeek、Qwen 或本地 OpenAI Compatible 服务。
 
 商业版会提供更多模型供应商适配、多模型配置、调用审计和成本统计。

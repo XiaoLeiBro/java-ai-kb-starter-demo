@@ -187,14 +187,37 @@ public class ChatApplicationService {
     // 调用 LLM
     try {
       if (!includeUsage) {
-        return new ChatAnswer(llmProvider.chat(systemPrompt, userMessage), references);
+        return new ChatAnswer(
+            toPlainTextAnswer(llmProvider.chat(systemPrompt, userMessage)), references);
       }
       LlmChatResult result = llmProvider.chatWithUsage(systemPrompt, userMessage);
-      return new ChatAnswer(result.answer(), references, result);
+      LlmChatResult plainResult =
+          new LlmChatResult(
+              toPlainTextAnswer(result.answer()),
+              result.promptTokens(),
+              result.completionTokens(),
+              result.totalTokens());
+      return new ChatAnswer(plainResult.answer(), references, plainResult);
     } catch (Exception e) {
       log.error("LLM chat failed: kbId={}", kbId.value(), e);
       throw new BusinessException(ErrorCode.LLM_PROVIDER_ERROR, "LLM 调用失败: " + e.getMessage());
     }
+  }
+
+  private String toPlainTextAnswer(String answer) {
+    if (answer == null || answer.isBlank()) {
+      return "";
+    }
+    return answer
+        .replace("```", "")
+        .replaceAll("(?m)^\\s{0,3}#{1,6}\\s*", "")
+        .replaceAll("\\*\\*(.*?)\\*\\*", "$1")
+        .replaceAll("__(.*?)__", "$1")
+        .replaceAll("`([^`]+)`", "$1")
+        .replaceAll("(?m)^\\s*>\\s?", "")
+        .replaceAll("(?m)^\\s*[-*+]\\s+", "")
+        .replace("|", "")
+        .trim();
   }
 
   private Message saveUserMessageAndTouchConversation(Conversation conversation, String question) {

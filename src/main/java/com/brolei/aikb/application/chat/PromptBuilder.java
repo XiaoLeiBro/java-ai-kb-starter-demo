@@ -23,6 +23,9 @@ public class PromptBuilder {
           + "只能基于给定的知识库片段回答用户问题。\n"
           + "如果片段中没有答案，明确说「当前知识库中没有找到相关信息」。\n"
           + "不要编造制度、金额、日期、负责人。\n\n"
+          + "回答格式要求：使用有层次的自然中文纯文本。可以使用标题独立成行、段落空行、中文序号或阿拉伯数字列表；"
+          + "不要使用 Markdown 符号或语法，例如 #、*、-、>、```、|、加粗、表格、代码块、链接语法。"
+          + "优先用短句和短段落，让非技术用户也能直接阅读。\n\n"
           + "以下是知识库中的相关片段：\n";
 
   /**
@@ -63,7 +66,7 @@ public class PromptBuilder {
   public String buildUserMessage(String question, List<RetrievedChunk> references) {
     StringBuilder sb = new StringBuilder("用户问题：");
     sb.append(question);
-    sb.append("\n\n请在回答时注明引用的片段编号，例如 [片段1]、[片段2]。");
+    sb.append("\n\n请用有排版的纯文本回答，并在相关句子后注明引用片段编号，例如 [片段1]、[片段2]。");
     return sb.toString();
   }
 }

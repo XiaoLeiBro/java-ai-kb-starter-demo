@@ -16,11 +16,14 @@
 4. 打开 `http://localhost:18080/swagger-ui.html`，快速展示中文 API 文档。
 5. 打开前端页面 `http://localhost:18081`，注册或登录用户。
 6. 创建知识库。
-7. 上传 `examples/company-policy-demo.md`。
+7. 上传 `docs/sample-documents/公司年假制度.md`、`docs/sample-documents/客服售后规则.md`、`docs/sample-documents/产品介绍.md` 或文本型 PDF。
 8. 等待文档状态变为 `READY`。
-9. 提问并得到 AI 回答，展示引用片段。
-10. 打开调用记录页面，展示模型名、状态、耗时、Token。
-11. 结尾展示一句话结论：Docker Compose 一键启动后，可以完成知识库创建、文档上传、RAG 问答、对话历史和调用记录查看。
+9. 提问并得到 AI 回答，展示带自然段落的中文结果和引用片段。
+10. 点击引用片段对应的“下载原文件”，验证可追溯到原始资料。
+11. 打开调用记录页面，展示知识库名称、模型名、状态、秒级耗时、Token 和 `YYYY-MM-DD` 日期。
+12. 结尾展示一句话结论：Docker Compose 一键启动后，可以完成知识库创建、文档上传、RAG 问答、来源追溯、原文件下载、对话历史和调用记录查看。
+
+详细客户演示话术见：[../demo-script.md](../demo-script.md)
 
 ## 外部视频链接
 

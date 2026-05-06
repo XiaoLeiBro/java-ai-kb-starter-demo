@@ -55,5 +55,10 @@ data/
 # ---------- Claude / AI helpers ----------
 .claude/
 
+# ---------- Local AI / business context ----------
+README-商业化.md
+codex-企业知识库商业化交互上下文.md
+docs/context.md
+
 # ---------- OpenSpec local history ----------
 openspec/changes/archive/

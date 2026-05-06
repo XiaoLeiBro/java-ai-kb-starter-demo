@@ -1,11 +1,13 @@
 package com.brolei.aikb.interfaces.rest;
 
+import com.brolei.aikb.application.knowledge.DocumentDownload;
 import com.brolei.aikb.application.knowledge.KnowledgeApplicationService;
 import com.brolei.aikb.common.exception.BusinessException;
 import com.brolei.aikb.common.exception.ErrorCode;
 import com.brolei.aikb.domain.knowledge.model.KnowledgeBase;
 import com.brolei.aikb.domain.knowledge.model.KnowledgeBaseId;
 import com.brolei.aikb.domain.knowledge.model.KnowledgeDocument;
+import com.brolei.aikb.domain.knowledge.model.KnowledgeDocumentId;
 import com.brolei.aikb.domain.user.model.UserId;
 import com.brolei.aikb.interfaces.dto.ApiResult;
 import com.brolei.aikb.interfaces.dto.knowledge.CreateKnowledgeBaseRequest;
@@ -16,7 +18,11 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -71,7 +77,7 @@ public class KnowledgeBaseController {
       @Parameter(description = "知识库 ID", example = "4c9f0d1a-0a3a-4c48-bb6a-7c8b69e1b001")
           @PathVariable
           String id,
-      @Parameter(description = "要上传的文档文件，demo 推荐使用 Markdown 或纯文本文件") @RequestParam("file")
+      @Parameter(description = "要上传的文档文件，demo 支持 Markdown、纯文本或文本型 PDF") @RequestParam("file")
           MultipartFile file) {
     UserId ownerId = (UserId) authentication.getPrincipal();
     KnowledgeBaseId kbId = KnowledgeBaseId.of(id);
@@ -101,5 +107,27 @@ public class KnowledgeBaseController {
     List<KnowledgeDocument> docs = knowledgeApplicationService.listDocuments(ownerId, kbId);
     List<DocumentResponse> responses = docs.stream().map(DocumentResponse::from).toList();
     return ResponseEntity.ok(ApiResult.ok(responses));
+  }
+
+  /** 下载指定知识库下的原始文档. */
+  @Operation(summary = "下载知识库原始文档", description = "下载当前用户已上传到指定知识库的原始文件。")
+  @GetMapping("/{id}/documents/{documentId}/download")
+  public ResponseEntity<byte[]> downloadDocument(
+      Authentication authentication,
+      @Parameter(description = "知识库 ID") @PathVariable String id,
+      @Parameter(description = "文档 ID") @PathVariable String documentId) {
+    UserId ownerId = (UserId) authentication.getPrincipal();
+    DocumentDownload download =
+        knowledgeApplicationService.downloadDocument(
+            ownerId, KnowledgeBaseId.of(id), KnowledgeDocumentId.of(documentId));
+    return ResponseEntity.ok()
+        .contentType(MediaType.parseMediaType(download.contentType()))
+        .header(
+            HttpHeaders.CONTENT_DISPOSITION,
+            ContentDisposition.attachment()
+                .filename(download.filename(), StandardCharsets.UTF_8)
+                .build()
+                .toString())
+        .body(download.content());
   }
 }

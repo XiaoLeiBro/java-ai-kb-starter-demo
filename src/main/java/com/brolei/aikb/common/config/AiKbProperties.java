@@ -37,7 +37,7 @@ public class AiKbProperties {
   @Setter
   public static class Upload {
     private String rootDir = "./data/uploads";
-    private List<String> allowedExt = new ArrayList<>(List.of("md", "txt"));
+    private List<String> allowedExt = new ArrayList<>(List.of("md", "txt", "pdf"));
     private long maxFileSize = 10 * 1024 * 1024; // 10 MB
   }
 

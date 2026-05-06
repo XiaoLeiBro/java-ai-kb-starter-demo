@@ -49,6 +49,8 @@ class PromptBuilderTest {
     assertTrue(prompt.contains("年假为每年5天"));
     assertTrue(prompt.contains("policy.md"));
     assertTrue(prompt.contains("[片段1]"));
+    assertTrue(prompt.contains("不要使用 Markdown"));
+    assertTrue(prompt.contains("自然中文纯文本"));
   }
 
   @Test
@@ -92,6 +94,7 @@ class PromptBuilderTest {
     List<RetrievedChunk> refs = Collections.emptyList();
     String msg = promptBuilder.buildUserMessage("年假有多少天？", refs);
     assertTrue(msg.contains("年假有多少天？"));
-    assertTrue(msg.contains("请在回答时注明引用的片段编号"));
+    assertTrue(msg.contains("请用有排版的纯文本回答"));
+    assertTrue(msg.contains("引用片段编号"));
   }
 }

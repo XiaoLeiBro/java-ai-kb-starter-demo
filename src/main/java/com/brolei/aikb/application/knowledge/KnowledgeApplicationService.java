@@ -18,7 +18,6 @@ import com.brolei.aikb.domain.knowledge.service.TextSplitter;
 import com.brolei.aikb.domain.knowledge.service.VectorStore;
 import com.brolei.aikb.domain.llm.EmbeddingProvider;
 import com.brolei.aikb.domain.user.model.UserId;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -45,6 +44,7 @@ public class KnowledgeApplicationService {
   private final EmbeddingProvider embeddingProvider;
   private final VectorStore vectorStore;
   private final FileValidator fileValidator;
+  private final DocumentTextExtractor documentTextExtractor;
   private final AiKbProperties aiKbProperties;
 
   /** 构造知识库应用服务. */
@@ -57,6 +57,7 @@ public class KnowledgeApplicationService {
       EmbeddingProvider embeddingProvider,
       VectorStore vectorStore,
       FileValidator fileValidator,
+      DocumentTextExtractor documentTextExtractor,
       AiKbProperties aiKbProperties) {
     this.knowledgeBaseRepository = knowledgeBaseRepository;
     this.knowledgeDocumentRepository = knowledgeDocumentRepository;
@@ -66,6 +67,7 @@ public class KnowledgeApplicationService {
     this.embeddingProvider = embeddingProvider;
     this.vectorStore = vectorStore;
     this.fileValidator = fileValidator;
+    this.documentTextExtractor = documentTextExtractor;
     this.aiKbProperties = aiKbProperties;
   }
 
@@ -125,7 +127,7 @@ public class KnowledgeApplicationService {
 
     try {
       // 6. 读取文本（不在事务中）
-      String text = new String(fileContent, StandardCharsets.UTF_8);
+      String text = documentTextExtractor.extract(originalFilename, fileContent);
 
       // 7. 切分文本（不在事务中）
       List<String> chunkTexts = textSplitter.split(text);
@@ -202,6 +204,21 @@ public class KnowledgeApplicationService {
     return knowledgeDocumentRepository.findByKnowledgeBaseIdAndOwnerId(kbId, ownerId);
   }
 
+  /** 下载当前用户有权访问的原始文档. */
+  @Transactional(readOnly = true)
+  public DocumentDownload downloadDocument(
+      UserId ownerId, KnowledgeBaseId kbId, KnowledgeDocumentId documentId) {
+    KnowledgeDocument document =
+        knowledgeDocumentRepository
+            .findById(documentId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+    if (!document.ownerId().equals(ownerId) || !document.knowledgeBaseId().equals(kbId)) {
+      throw new BusinessException(ErrorCode.NOT_FOUND);
+    }
+    byte[] content = fileStorage.read(document.storagePath());
+    return new DocumentDownload(document.originalFilename(), document.contentType(), content);
+  }
+
   /** 根据文件名扩展名推断内容类型. */
   private String deriveContentType(String filename) {
     if (filename == null) {
@@ -213,6 +230,9 @@ public class KnowledgeApplicationService {
     }
     if (lower.endsWith(".txt")) {
       return "text/plain";
+    }
+    if (lower.endsWith(".pdf")) {
+      return "application/pdf";
     }
     return "application/octet-stream";
   }
